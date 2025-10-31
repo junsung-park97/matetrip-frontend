@@ -1,1 +1,1 @@
-# matetrip_frontend
+# matetrip-frontend
