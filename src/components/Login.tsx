@@ -21,8 +21,13 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic
-    onLogin();
+    //임시 테스트 로그인 로직
+    if (email === 'admin@email.com' && password === '1q2w3e') {
+      onLogin();
+    } else {
+      alert('아이디 비밀번호가 틀렸습니다.');
+    }
+
   };
 
   const handleSocialLogin = (provider: 'google' | 'kakao') => {
@@ -250,7 +255,7 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
             <p className="text-gray-600 mb-6 text-sm">
               가입하신 이메일 주소를 입력하시면 임시 비밀번호를 보내드립니다.
             </p>
-            
+
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div>
                 <Label htmlFor="resetEmail">이메일</Label>
