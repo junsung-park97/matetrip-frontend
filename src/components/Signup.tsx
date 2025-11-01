@@ -27,6 +27,13 @@ const PERSONALITY_TYPES = [
   { value: 'quiet', label: '조용한', emoji: '🤫' },
 ];
 
+const MBTI_TYPES = [
+  'ISTJ', 'ISFJ', 'INFJ', 'INTJ',
+  'ISTP', 'ISFP', 'INFP', 'INTP',
+  'ESTP', 'ESFP', 'ENFP', 'ENTP',
+  'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ'
+];
+
 export function Signup({ onSignup, onLoginClick }: SignupProps) {
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -39,6 +46,7 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
     confirmPassword: '',
     nickname: '',
     phone: '',
+    mbti: '',
     travelStyles: [] as string[],
     personality: [] as string[],
     agreeTerms: false,
@@ -326,6 +334,23 @@ export function Signup({ onSignup, onLoginClick }: SignupProps) {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="mbti">MBTI (선택)</Label>
+                    <select
+                      id="mbti"
+                      value={formData.mbti}
+                      onChange={(e) => handleInputChange('mbti', e.target.value)}
+                      className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    >
+                      <option value="">MBTI를 선택해주세요</option>
+                      {MBTI_TYPES.map((mbti) => (
+                        <option key={mbti} value={mbti}>
+                          {mbti}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <Button

@@ -16,20 +16,25 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // 임시 테스트 로직
-    if (email === 'admin@example.com' && password === '1q2w3e') {
-      onLogin();
-    } else {
-      alert('이메일 또는 비밀번호가 올바르지 않습니다.');
-    }
+    // Handle login logic
+    onLogin();
   };
 
   const handleSocialLogin = (provider: 'google' | 'kakao') => {
     // Handle social login logic
     console.log(`Login with ${provider}`);
+  };
+
+  const handlePasswordReset = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Send password reset email to:', resetEmail);
+    setShowForgotPassword(false);
+    setResetEmail('');
   };
 
   return (
@@ -146,6 +151,7 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
                 </div>
                 <button
                   type="button"
+                  onClick={() => setShowForgotPassword(true)}
                   className="text-sm text-blue-600 hover:text-blue-700"
                 >
                   비밀번호 찾기
@@ -233,11 +239,52 @@ export function Login({ onLogin, onSignupClick }: LoginProps) {
             </a>
             에 동의합니다.
           </p>
-          <p className="mt-6 text-center text-xs text-blue-600">
-            우리는 어떻한 책임도 지지 않습니다.
-          </p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-gray-900 mb-2">비밀번호 찾기</h3>
+            <p className="text-gray-600 mb-6 text-sm">
+              가입하신 이메일 주소를 입력하시면 임시 비밀번호를 보내드립니다.
+            </p>
+            
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div>
+                <Label htmlFor="resetEmail">이메일</Label>
+                <div className="relative mt-2">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="resetEmail"
+                    type="email"
+                    placeholder="example@email.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForgotPassword(false)}
+                  className="flex-1"
+                >
+                  취소
+                </Button>
+                <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                  임시 비밀번호 발송
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

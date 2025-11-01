@@ -1,129 +1,92 @@
 import { useState } from 'react';
-import { Calendar, MapPin, Clock, GripVertical, Trash2, Plus, Sparkles } from 'lucide-react';
+import { GripVertical, Trash2, Save, MapPin, Clock, Car } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
-interface PlaceItem {
-  id: number;
-  name: string;
-  time: string;
-  duration: string;
-  distance?: string;
-}
-
 const MOCK_PLAN = {
   day1: [
-    { id: 1, name: '해운대 해수욕장', time: '09:00', duration: '2시간' },
-    { id: 2, name: '광안리 해변', time: '12:00', duration: '1.5시간', distance: '7.2km, 15분' },
-    { id: 3, name: '센텀시티', time: '15:00', duration: '2시간', distance: '3.5km, 10분' },
+    { id: 1, name: '성산일출봉', time: '09:00', duration: '2시간', distance: '0km' },
+    { id: 2, name: '우도', time: '12:00', duration: '3시간', distance: '5km (차량 15분)' },
+    { id: 3, name: '협재 해수욕장', time: '16:00', duration: '2시간', distance: '45km (차량 1시간)' },
   ],
   day2: [
-    { id: 4, name: '태종대', time: '10:00', duration: '2시간' },
-    { id: 5, name: '감천문화마을', time: '14:00', duration: '2시간', distance: '12.3km, 25분' },
+    { id: 4, name: '한라산 등반', time: '07:00', duration: '5시간', distance: '30km (차량 40분)' },
+    { id: 5, name: '카페 투어', time: '14:00', duration: '2시간', distance: '10km (차량 20분)' },
   ],
 };
 
 export function PlanPanel() {
-  const [activeDay, setActiveDay] = useState('day1');
-
-  const handleDragStart = (e: React.DragEvent, id: number) => {
-    e.dataTransfer.setData('placeId', id.toString());
-  };
+  const [selectedDay, setSelectedDay] = useState<'day1' | 'day2'>('day1');
+  const currentPlan = MOCK_PLAN[selectedDay];
 
   return (
-    <div className="h-full bg-white border-r flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <h3 className="text-gray-900">여행 일정</h3>
-        </div>
-        
-        <Tabs value={activeDay} onValueChange={setActiveDay}>
-          <TabsList className="w-full">
-            <TabsTrigger value="day1" className="flex-1">Day 1</TabsTrigger>
-            <TabsTrigger value="day2" className="flex-1">Day 2</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+    <div className="h-full flex flex-col bg-white">
+      <Tabs value={selectedDay} onValueChange={(v) => setSelectedDay(v as 'day1' | 'day2')} className="flex-1 flex flex-col">
+        <TabsList className="bg-gray-100 m-4 mb-0">
+          <TabsTrigger value="day1" className="flex-1">Day 1</TabsTrigger>
+          <TabsTrigger value="day2" className="flex-1">Day 2</TabsTrigger>
+        </TabsList>
 
-      {/* Plan List */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3">
-          {(activeDay === 'day1' ? MOCK_PLAN.day1 : MOCK_PLAN.day2).map((place, index) => (
-            <div key={place.id}>
-              <div
-                draggable
-                onDragStart={(e) => handleDragStart(e, place.id)}
-                className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 cursor-move group"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center gap-2 mt-1">
-                    <GripVertical className="w-4 h-4 text-gray-400" />
-                    <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">
-                      {index + 1}
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h4 className="text-gray-900 text-sm truncate">{place.name}</h4>
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <TabsContent value={selectedDay} className="m-0">
+            <div className="space-y-3">
+              {currentPlan.map((place, index) => (
+                <div
+                  key={place.id}
+                  className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start gap-3">
+                    <button className="mt-1 cursor-grab active:cursor-grabbing">
+                      <GripVertical className="w-5 h-5 text-gray-400" />
+                    </button>
                     
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <Clock className="w-3 h-3" />
-                        <span>{place.time}</span>
-                        <Badge variant="secondary" className="text-xs h-5">
-                          {place.duration}
-                        </Badge>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">{index + 1}</Badge>
+                          <h4 className="text-gray-900">{place.name}</h4>
+                        </div>
+                        <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                          <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-1 text-sm text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{place.time} ({place.duration})</span>
+                        </div>
+                        {index > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4" />
+                            <span>{place.distance}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Distance Info */}
-              {place.distance && (
-                <div className="flex items-center gap-2 py-2 px-3 ml-12 text-xs text-gray-500">
-                  <div className="w-px h-4 bg-gray-300" />
-                  <MapPin className="w-3 h-3" />
-                  <span>{place.distance}</span>
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Add Place Button */}
-        <Button
-          variant="outline"
-          className="w-full mt-4 border-dashed"
-          size="sm"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          장소 추가
-        </Button>
-      </div>
-
-      {/* Footer Actions */}
-      <div className="p-4 border-t space-y-2">
-        <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-          <Sparkles className="w-4 h-4 mr-2" />
-          AI 경로 최적화
-        </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" size="sm">
-            불러오기
-          </Button>
-          <Button variant="outline" className="flex-1" size="sm">
-            저장
-          </Button>
+            {currentPlan.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <MapPin className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>아직 일정이 없습니다</p>
+                <p className="text-sm">지도에서 장소를 추가해보세요</p>
+              </div>
+            )}
+          </TabsContent>
         </div>
+      </Tabs>
+
+      {/* Footer */}
+      <div className="border-t p-4">
+        <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
+          <Save className="w-4 h-4" />
+          일정 저장
+        </Button>
       </div>
     </div>
   );

@@ -6,22 +6,27 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 
-interface CreatePostModalProps {
+interface EditPostModalProps {
+  postId: number;
   onClose: () => void;
 }
 
 const KEYWORD_OPTIONS = ['힐링', '액티브', '맛집투어', '사진', '자연', '도시', '해변', '산', '카페', '쇼핑'];
 
-export function CreatePostModal({ onClose }: CreatePostModalProps) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    location: '',
-    maxParticipants: 4,
-  });
-  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+// Mock data - 실제로는 postId로 데이터를 가져옴
+const MOCK_POST_DATA = {
+  title: '제주도 힐링 여행 같이 가실 분 🌊',
+  description: '제주도에서 여유롭게 힐링하면서 맛집도 탐방할 분들 구합니다!',
+  startDate: '2025-11-15',
+  endDate: '2025-11-18',
+  location: '제주도',
+  maxParticipants: 4,
+  keywords: ['힐링', '자연', '맛집투어'],
+};
+
+export function EditPostModal({ postId, onClose }: EditPostModalProps) {
+  const [formData, setFormData] = useState(MOCK_POST_DATA);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>(MOCK_POST_DATA.keywords);
 
   const toggleKeyword = (keyword: string) => {
     setSelectedKeywords(prev =>
@@ -33,7 +38,7 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Create post:', { ...formData, keywords: selectedKeywords });
+    console.log('Updated post:', { ...formData, keywords: selectedKeywords });
     onClose();
   };
 
@@ -42,7 +47,7 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
-          <h3 className="text-gray-900">게시물 작성</h3>
+          <h3 className="text-gray-900">게시물 수정</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -58,7 +63,6 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
             <Label htmlFor="title">여행 제목</Label>
             <Input
               id="title"
-              placeholder="예) 제주도 힐링 여행 같이 가실 분 🌊"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               className="mt-2"
@@ -71,7 +75,6 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
             <Label htmlFor="description">상세 설명</Label>
             <Textarea
               id="description"
-              placeholder="여행 계획과 동행에게 바라는 점을 자유롭게 작성해주세요."
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="mt-2 min-h-32"
@@ -119,7 +122,6 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
             </Label>
             <Input
               id="location"
-              placeholder="예) 제주도"
               value={formData.location}
               onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
               className="mt-2"
@@ -177,9 +179,9 @@ export function CreatePostModal({ onClose }: CreatePostModalProps) {
           </Button>
           <Button 
             onClick={handleSubmit}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
           >
-            작성 완료
+            수정 완료
           </Button>
         </div>
       </div>

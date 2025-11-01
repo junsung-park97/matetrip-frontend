@@ -1,90 +1,117 @@
 import { useState } from 'react';
-import { MapPanel } from './MapPanel';
-import { PlanPanel } from './PlanPanel';
-import { ChatPanel } from './ChatPanel';
-import { Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, X, Map as MapIcon, MessageCircle, Search, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
-import { Avatar } from './ui/avatar';
+import { Badge } from './ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { MapPanel } from './MapPanel';
+import { ChatPanel } from './ChatPanel';
+import { PlanPanel } from './PlanPanel';
 
 interface WorkspaceProps {
-  postId: number | null;
+  postId: number;
+  onEndTrip: () => void;
 }
 
-const MOCK_PARTICIPANTS = [
-  { id: 1, name: '여행러버', online: true },
-  { id: 2, name: '산악인', online: true },
-  { id: 3, name: '바다조아', online: false },
+const MOCK_MEMBERS = [
+  { id: 1, name: '여행러버', isAuthor: true },
+  { id: 2, name: '바다조아', isAuthor: false },
+  { id: 3, name: '제주사랑', isAuthor: false },
 ];
 
-export function Workspace({ postId }: WorkspaceProps) {
-  const [showPlanPanel, setShowPlanPanel] = useState(true);
-  const [showChatPanel, setShowChatPanel] = useState(true);
-
-  if (!postId) {
-    return (
-      <div className="h-[calc(100vh-4rem)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-gray-900 mb-2">워크스페이스를 선택해주세요</h3>
-          <p className="text-gray-600">참여 중인 여행을 선택하면 워크스페이스가 열립니다</p>
-        </div>
-      </div>
-    );
-  }
+export function Workspace({ postId, onEndTrip }: WorkspaceProps) {
+  const [showMembers, setShowMembers] = useState(false);
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex bg-gray-50">
-      {/* Left Panel - Plan */}
-      <div className={`transition-all duration-300 ${showPlanPanel ? 'w-80' : 'w-0'} flex-shrink-0`}>
-        {showPlanPanel && <PlanPanel />}
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-gray-900">제주도 힐링 여행</h2>
+          <button
+            onClick={() => setShowMembers(!showMembers)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            <span className="text-sm">{MOCK_MEMBERS.length}명</span>
+          </button>
+        </div>
+        
+        <Button 
+          variant="destructive" 
+          size="sm"
+          onClick={onEndTrip}
+        >
+          여행 종료하기
+        </Button>
       </div>
 
-      {/* Toggle Left Panel */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute left-0 top-20 z-10 rounded-l-none shadow-md"
-        onClick={() => setShowPlanPanel(!showPlanPanel)}
-      >
-        {showPlanPanel ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-      </Button>
-
-      {/* Center Panel - Map */}
-      <div className="flex-1 relative">
-        {/* Participants Bar */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white rounded-full shadow-lg px-4 py-2 flex items-center gap-3">
-          <Users className="w-4 h-4 text-gray-600" />
-          <div className="flex -space-x-2">
-            {MOCK_PARTICIPANTS.map((participant) => (
-              <div key={participant.id} className="relative">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full border-2 border-white" />
-                {participant.online && (
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border border-white" />
+      {/* Members Sidebar */}
+      {showMembers && (
+        <div className="absolute top-16 left-4 z-10 bg-white rounded-lg shadow-lg border p-4 w-64">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-gray-900">참여 인원</h3>
+            <button onClick={() => setShowMembers(false)}>
+              <X className="w-4 h-4 text-gray-500" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {MOCK_MEMBERS.map((member) => (
+              <div key={member.id} className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full" />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-900">{member.name}</div>
+                </div>
+                {member.isAuthor && (
+                  <Badge variant="secondary" className="text-xs">방장</Badge>
                 )}
               </div>
             ))}
           </div>
-          <span className="text-sm text-gray-600">{MOCK_PARTICIPANTS.filter(p => p.online).length}명 참여중</span>
         </div>
+      )}
 
-        <MapPanel />
-      </div>
+      {/* Main Content with Tabs */}
+      <div className="flex-1 overflow-hidden">
+        <Tabs defaultValue="map" className="h-full flex flex-col">
+          <TabsList className="bg-white border-b rounded-none w-full justify-start px-4">
+            <TabsTrigger value="map" className="gap-2">
+              <MapIcon className="w-4 h-4" />
+              지도
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2">
+              <MessageCircle className="w-4 h-4" />
+              채팅
+            </TabsTrigger>
+            <TabsTrigger value="search" className="gap-2">
+              <Search className="w-4 h-4" />
+              검색
+            </TabsTrigger>
+            <TabsTrigger value="plan" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              일정
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Toggle Right Panel */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="absolute right-0 top-20 z-10 rounded-r-none shadow-md"
-        onClick={() => setShowChatPanel(!showChatPanel)}
-      >
-        {showChatPanel ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </Button>
+          <div className="flex-1 overflow-hidden">
+            <TabsContent value="map" className="h-full m-0">
+              <MapPanel />
+            </TabsContent>
 
-      {/* Right Panel - Chat */}
-      <div className={`transition-all duration-300 ${showChatPanel ? 'w-96' : 'w-0'} flex-shrink-0`}>
-        {showChatPanel && <ChatPanel />}
+            <TabsContent value="chat" className="h-full m-0">
+              <ChatPanel />
+            </TabsContent>
+
+            <TabsContent value="search" className="h-full m-0 p-4">
+              <div className="h-full flex items-center justify-center text-gray-500">
+                검색 기능 (개발 예정)
+              </div>
+            </TabsContent>
+
+            <TabsContent value="plan" className="h-full m-0">
+              <PlanPanel />
+            </TabsContent>
+          </div>
+        </Tabs>
       </div>
     </div>
   );
