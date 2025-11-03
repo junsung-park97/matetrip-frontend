@@ -75,43 +75,53 @@ export function PostDetail({
     MOCK_POST.pendingRequests
   );
 
-  // 현재 사용자가 작성자인지 확인 (실제로는 로그인 정보와 비교)
-  const isAuthor = true; // Mock
+  // 현재 사용자가 작성자인지 확인 (실제로는 로그인 정보와 비교) true: 작성자, false: 참가자
+  const isAuthor = false; // Mock
 
-  const handleApply = () => {
+  const handleApply = async () => {
+    // 백엔드에 데이터를 보내서 status가 accept이면 컴포넌트가 생성되도록 할 것.\
+    // await axios.post(
+    //   `http://localhost:3000/post/${postId}/participations`,
+    //   { requester_id: currentMembers }
+    // );
     setHasApplied(true);
   };
 
   const handleAcceptRequest = async (userId: number) => {
     console.log('Accept request from user:', userId);
-    try {
-      await axios.patch(`/api/posts/${postId}/requests/${userId}`, {
-        status: 'accepted',
-      });
-      const acceptedUser = pendingRequests.find((req) => req.id === userId);
-      if (acceptedUser) {
-        // pending에서 제거
-        setPendingRequests((prev) => prev.filter((req) => req.id !== userId));
+    setIsAccepted(true);
+    // try {
+    //   await axios.patch(
+    //     `http://localhost:3000/post/${postId}/approval/${userId}`,
+    //     {
+    //       status: 'accepted',
+    //     }
+    //   );
+    //   const acceptedUser = pendingRequests.find((req) => req.id === userId);
+    //   if (acceptedUser) {
+    //     // pending에서 제거
+    //     setPendingRequests((prev) => prev.filter((req) => req.id !== userId));
 
-        // currentMember에 추가
-        setCurrentMembers((prev) => [
-          ...prev,
-          {
-            id: acceptedUser.id,
-            name: acceptedUser.name,
-            temp: acceptedUser.temp,
-            isAuthor: false,
-          },
-        ]);
-      }
-    } catch (error) {
-      // 에러 처리
-      console.error('Fail', error);
-    }
+    //     // currentMember에 추가
+    //     setCurrentMembers((prev) => [
+    //       ...prev,
+    //       {
+    //         id: acceptedUser.id,
+    //         name: acceptedUser.name,
+    //         temp: acceptedUser.temp,
+    //         isAuthor: false,
+    //       },
+    //     ]);
+    //   }
+    // } catch (error) {
+    //   // 에러 처리
+    //   console.error('Fail', error);
+    // }
   };
 
-  const handleRejectRequest = (userId: number) => {
+  const handleRejectRequest = async (userId: number) => {
     console.log('Reject request from user:', userId);
+    // await axios.get(`http://localhost:3000/api/${userId}/participations/${userId}/reject`);
   };
 
   const getTempColor = (temp: number) => {
@@ -348,7 +358,11 @@ export function PostDetail({
                 ))}
               </div>
             </div>
-
+            {!isLoggedIn && (
+              <Button disabled className="w-full">
+                로그인 후 신청 가능
+              </Button>
+            )}
             {isLoggedIn && !isAuthor && (
               <>
                 {!hasApplied && !isAccepted && (
@@ -384,25 +398,26 @@ export function PostDetail({
               >
                 워크스페이스 입장
               </Button>
-            )}
+            )}}
 
             {!isLoggedIn && (
               <Button disabled className="w-full">
                 로그인 후 신청 가능
               </Button>
             )} */}
-            {isLoggedIn ? (
+
+            {/* {isLoggedIn ? (
               <Button
                 onClick={() => onJoinWorkspace(postId)}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
-                워크스페이스 입장
+                신청하기
               </Button>
             ) : (
               <Button disabled className="w-full">
                 로그인 후 신청 가능
               </Button>
-            )}
+            )} */}
           </Card>
         </div>
       </div>
