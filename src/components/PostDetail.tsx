@@ -16,6 +16,7 @@ import { Card } from './ui/card';
 import { Separator } from './ui/separator';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { Avatar } from './ui/avatar';
+import axios from 'axios';
 
 interface PostDetailProps {
   postId: number;
@@ -67,6 +68,12 @@ export function PostDetail({
 }: PostDetailProps) {
   const [hasApplied, setHasApplied] = useState(false);
   const [isAccepted, setIsAccepted] = useState(false);
+  const [currentMembers, setCurrentMembers] = useState(
+    MOCK_POST.currentMembers
+  );
+  const [pendingRequests, setPendingRequests] = useState(
+    MOCK_POST.pendingRequests
+  );
 
   // 현재 사용자가 작성자인지 확인 (실제로는 로그인 정보와 비교)
   const isAuthor = true; // Mock
@@ -75,8 +82,32 @@ export function PostDetail({
     setHasApplied(true);
   };
 
-  const handleAcceptRequest = (userId: number) => {
+  const handleAcceptRequest = async (userId: number) => {
     console.log('Accept request from user:', userId);
+    try {
+      await axios.patch(`/api/posts/${postId}/requests/${userId}`, {
+        status: 'accepted',
+      });
+      const acceptedUser = pendingRequests.find((req) => req.id === userId);
+      if (acceptedUser) {
+        // pending에서 제거
+        setPendingRequests((prev) => prev.filter((req) => req.id !== userId));
+
+        // currentMember에 추가
+        setCurrentMembers((prev) => [
+          ...prev,
+          {
+            id: acceptedUser.id,
+            name: acceptedUser.name,
+            temp: acceptedUser.temp,
+            isAuthor: false,
+          },
+        ]);
+      }
+    } catch (error) {
+      // 에러 처리
+      console.error('Fail', error);
+    }
   };
 
   const handleRejectRequest = (userId: number) => {
@@ -184,10 +215,10 @@ export function PostDetail({
           {/* Current Members */}
           <div>
             <h3 className="text-gray-900 mb-4">
-              참여중인 동행 ({MOCK_POST.currentMembers.length}명)
+              참여중인 동행 ({currentMembers.length}명)
             </h3>
             <div className="space-y-3">
-              {MOCK_POST.currentMembers.map((member) => (
+              {currentMembers.map((member) => (
                 <div
                   key={member.id}
                   className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
@@ -212,15 +243,15 @@ export function PostDetail({
           </div>
 
           {/* Pending Requests (Author Only) */}
-          {isAuthor && MOCK_POST.pendingRequests.length > 0 && (
+          {isAuthor && pendingRequests.length > 0 && (
             <>
               <Separator className="my-6" />
               <div>
                 <h3 className="text-gray-900 mb-4">
-                  동행 신청 ({MOCK_POST.pendingRequests.length}명)
+                  동행 신청 ({pendingRequests.length}명)
                 </h3>
                 <div className="space-y-3">
-                  {MOCK_POST.pendingRequests.map((request) => (
+                  {pendingRequests.map((request) => (
                     <div
                       key={request.id}
                       className="flex items-center gap-3 p-3 border rounded-lg"
