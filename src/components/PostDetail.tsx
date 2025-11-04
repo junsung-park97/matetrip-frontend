@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   // Lucide-react 아이콘 임포트
+  User,
   ArrowLeft,
   MapPin,
   Calendar,
@@ -19,12 +20,15 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client'; // API 클라이언트 임포트
 import { type Post } from './PostCard'; // Post 타입 임포트
 import { translateKeyword } from '../utils/keyword'; // 키워드 번역 함수 임포트
+
 import { useAuthStore } from '../store/authStore';
+import type { Participation } from '../types/participation.ts';
 
 interface PostDetailProps {
   postId: string;
   isLoggedIn: boolean;
   onJoinWorkspace: (postId: string) => void;
+  onViewProfile: (userId: string) => void;
   onEditPost: () => void;
 }
 
@@ -32,15 +36,14 @@ export function PostDetail({
   postId,
   isLoggedIn,
   onJoinWorkspace,
+  onViewProfile,
   onEditPost,
 }: PostDetailProps) {
   const { user } = useAuthStore();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  const [hasApplied, setHasApplied] = useState(false);
-  const [isAccepted, setIsAccepted] = useState(false);
+  const [participations, setParticipations] = useState<Participation[]>([]);
 
   useEffect(() => {
     const fetchPostDetail = async () => {
@@ -49,7 +52,13 @@ export function PostDetail({
       setError(null);
       try {
         const response = await client.get<Post>(`/post/${postId}`);
-        setPost(response.data);
+        const postData = response.data;
+        setPost(postData);
+
+        const participationsResponse = await client.get<Participation[]>(
+          `/posts/${postId}/participations`
+        );
+        setParticipations(participationsResponse.data);
       } catch (err) {
         setError(err as Error);
         console.error('Failed to fetch post details:', err);
@@ -62,10 +71,18 @@ export function PostDetail({
   }, [postId]);
 
   // 현재 로그인한 사용자가 게시글 작성자인지 확인
-  const isAuthor = user && post ? user.id === post.writerProfile.id : false;
+  const isAuthor = user && post ? user.userId === post.writerProfile.id : false;
 
-  const handleApply = () => {
-    setHasApplied(true);
+  // 현재 로그인한 사용자의 참여 정보 확인
+  const userParticipation = user
+    ? participations.find((p) => p.requester.id === user.userId)
+    : undefined;
+
+  const handleApply = async () => {
+    // TODO: 동행 신청 API 연동
+    // 예: await client.post(`/posts/${postId}/participations`);
+    // 성공 후에는 fetchPostDetail()을 다시 호출하여 상태를 갱신합니다.
+    console.log('Applying for post:', postId);
   };
 
   const handleAcceptRequest = (userId: number) => {
@@ -74,6 +91,10 @@ export function PostDetail({
 
   const handleRejectRequest = (userId: number) => {
     console.log('Reject request from user:', userId);
+  };
+
+  const handleViewProfile = (userId: string) => {
+    onViewProfile(userId);
   };
 
   // TODO: 매너온도 기능 구현 시 실제 데이터와 연동 필요
@@ -167,7 +188,7 @@ export function PostDetail({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 text-red-600 hover:text-red-700"
+                    className="gap-2 text-red-600 hover:text-red-700" // TODO: 삭제 핸들러 연결
                   >
                     <Trash2 className="w-4 h-4" />
                     삭제
@@ -203,32 +224,37 @@ export function PostDetail({
 
           {/* Current Members */}
           {/* TODO: 참여중인 동행 목록 API 연동 필요 */}
-          <div>
-            <h3 className="text-gray-900 mb-4">참여중인 동행 (1명)</h3>
-            <div className="space-y-3">
-              {/* {MOCK_POST.currentMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-900">{member.name}</span>
-                      {member.isAuthor && (
-                        <Badge variant="secondary" className="text-xs">
-                          방장
-                        </Badge>
-                      )}
+          {participations.length > 0 && (
+            <div>
+              <h3 className="text-gray-900 mb-4">
+                참여중인 동행 ({participations.length}명)
+              </h3>
+              <div className="space-y-3">
+                {participations.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleViewProfile(p.requester.id)}
+                  >
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
                     </div>
-                    <div className={`text-sm ${getTempColor(member.temp)}`}>
-                      매너온도 {member.temp}°C
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-900">
+                          {p.requester.profile.nickname}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {p.status}
+                        </Badge>
+                      </div>
+                      {/* TODO: 매너온도 데이터 연동 */}
                     </div>
                   </div>
-                </div>
-              ))} */}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Pending Requests (Author Only) */}
           {/* TODO: 동행 신청 목록 API 연동 필요 */}
@@ -356,15 +382,30 @@ export function PostDetail({
 
             {isLoggedIn && !isAuthor && (
               <>
-                {/* TODO: 동행 신청 상태(hasApplied, isAccepted) API 연동 필요 */}
-                {!hasApplied && !isAccepted && (
-                  <Button onClick={handleApply} className="w-full bg-blue-600 hover:bg-blue-700">
+                {!userParticipation && (
+                  <Button
+                    onClick={handleApply}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
                     동행 신청하기
                   </Button>
                 )}
-                {hasApplied && !isAccepted && (
+                {userParticipation?.status === '대기중' && (
                   <Button disabled className="w-full bg-gray-400">
-                    신청 대기중
+                    이미 신청한 동행입니다
+                  </Button>
+                )}
+                {userParticipation?.status === '거절' && (
+                  <Button disabled className="w-full bg-gray-400">
+                    거절된 동행입니다
+                  </Button>
+                )}
+                {userParticipation?.status === '승인' && (
+                  <Button
+                    onClick={() => onJoinWorkspace(postId)}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    워크스페이스 입장
                   </Button>
                 )}
               </>
