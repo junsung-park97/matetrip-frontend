@@ -162,7 +162,7 @@ const EMPTY_PROFILE: ProfileData = {
 interface ProfileProps {
   isLoggedIn: boolean;
   onViewPost: (postId: string) => void;
-  userId?: number;
+  userId?: string;
 }
 
 export function Profile({
