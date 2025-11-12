@@ -110,7 +110,10 @@ export function MainPage({
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           setUserPosts(sortedUserPosts);
-          console.log(`${user.profile.nickname}님이 참여중인 여행`, sortedUserPosts);
+          console.log(
+            `${user.profile.nickname}님이 참여중인 여행`,
+            sortedUserPosts
+          );
         } else {
           setUserPosts([]);
         }
@@ -121,7 +124,6 @@ export function MainPage({
       }
     };
 
-
     fetchAllPosts();
   }, [
     isLoggedIn,
@@ -130,7 +132,7 @@ export function MainPage({
     isAuthLoading,
     fetchTrigger,
   ]); // Add fetchTrigger to dependency array
-  
+
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50">
       {/* --- User's Participating Trips Section --- */}
@@ -148,7 +150,8 @@ export function MainPage({
             </h2>
           </div>
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            // <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex ">
               {Array.from({ length: 3 }).map((_, index) => (
                 <MainPostCardSkeleton key={index} />
               ))}
