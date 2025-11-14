@@ -107,8 +107,15 @@ export function WorkspaceCard({
             </div>
           )} */}
         </div>
-
-        
+      {/* 상태 배지 */}
+      {(status === '모집중' || status === '완료') && (
+        <Badge
+          className="absolute top-4 right-4 z-10 px-3 py-1 text-sm font-semibold"
+          variant={status === '모집중' ? 'default' : 'secondary'}
+        >
+          {status === '모집중' ? '모집중' : '모집완료'}
+        </Badge>
+      )}
       </div>
 
       {/* 콘텐츠 */}

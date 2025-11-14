@@ -67,6 +67,45 @@ const REGION_CATEGORIES = [
   },
 ];
 
+const normalizeOverlapText = (values?: unknown): string | undefined => {
+  if (!values) {
+    return undefined;
+  }
+
+  const arrayValues = Array.isArray(values) ? values : [values];
+
+  const normalized = arrayValues
+    .map((value) => {
+      if (!value) {
+        return '';
+      }
+      if (typeof value === 'string') {
+        return value;
+      }
+      if (typeof value === 'object') {
+        const candidate = value as Record<string, unknown>;
+        if (typeof candidate.label === 'string') {
+          return candidate.label;
+        }
+        if (typeof candidate.value === 'string') {
+          return candidate.value;
+        }
+        if (typeof candidate.name === 'string') {
+          return candidate.name;
+        }
+      }
+      return String(value);
+    })
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0);
+
+  if (!normalized.length) {
+    return undefined;
+  }
+
+  return normalized.join(', ');
+};
+
 export function MainPage({
   onSearch,
   onViewPost,
@@ -93,7 +132,12 @@ export function MainPage({
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        setPosts(sortedInitialPosts);
+
+        // '최신 동행 모집' 섹션에는 '모집중'인 글만 필터링하여 설정
+        const recruitingPosts = sortedInitialPosts.filter(
+          (post) => post.status === '모집중'
+        );
+        setPosts(recruitingPosts);
         console.log(`최신 동행 글 목록`, sortedInitialPosts);
       } catch (error) {
         console.error('Failed to fetch posts:', error);

@@ -20,6 +20,8 @@ import { type UserProfile } from '../types/user';
 import { translateKeyword } from '../utils/keyword';
 import { WorkspaceCard } from './WorkspaceCard';
 import { EditProfileModal } from './EditProfileModal'; // Import EditProfileModal
+import type { TravelStyleType } from '../constants/travelStyle';
+import type { TravelTendencyType } from '../constants/travelTendencyType';
 
 interface ProfileModalProps {
   open: boolean;
@@ -44,8 +46,8 @@ interface Review {
       gender: string;
       intro: string;
       description: string;
-      travelStyles: string[];
-      travelTendency: string[];
+      travelStyles: TravelStyleType[];
+      travelTendency: TravelTendencyType[];
       mbtiTypes: string;
     };
   };
@@ -66,6 +68,7 @@ export function ProfileModal({
   const { user: loggedInUser } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [travelHistory, setTravelHistory] = useState<Post[]>([]);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -81,7 +84,7 @@ export function ProfileModal({
     try {
       const [profileRes, writtenPostsRes, participatedPostsRes, reviewsRes] =
         await Promise.all([
-          client.get<UserProfile>(`/users/${userId}/profile`),
+          client.get<UserProfile>(`/profile/user/${userId}`),
           client.get<Post[]>(`/users/${userId}/posts`),
           client.get<Post[]>(`/users/${userId}/participations`),
           // API 응답이 POST가 아닌 GET으로 추정됩니다.
@@ -94,9 +97,23 @@ export function ProfileModal({
         participatedPostsRes.data
       );
 
-      console.log('GET /users/{userId}profile 응답', profileRes.data);
+      console.log('GET /profile/user/{userId} 응답', profileRes.data);
 
       setProfile(profileRes.data);
+      //imageId가 있으면 url 호출
+      if (profileRes.data.profileImageId) {
+        try {
+          const presignedRes = await client.get<{ url: string }>(
+            `/binary-content/${profileRes.data.profileImageId}/presigned-url`
+          );
+          setProfileImageUrl(presignedRes.data.url);
+        } catch (presignedError) {
+          console.error('프로필 이미지 URL 불러오기 실패:', presignedError);
+          setProfileImageUrl(null);
+        }
+      } else {
+        setProfileImageUrl(null);
+      }
       setError(null);
 
       // 작성한 동행과 참여한 동행 목록을 합치고 중복을 제거합니다.
@@ -154,6 +171,7 @@ export function ProfileModal({
   }
 
   if (isLoading || !profile) {
+    //setProfileImageUrl(null);
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl h-[80vh]">
@@ -164,6 +182,18 @@ export function ProfileModal({
       </Dialog>
     );
   }
+
+  const rawMannerTemperature =
+    profile.mannerTemperature ?? profile.mannerTemp ?? null;
+  const parsedMannerTemperature =
+    typeof rawMannerTemperature === 'number'
+      ? rawMannerTemperature
+      : rawMannerTemperature != null
+        ? Number(rawMannerTemperature)
+        : null;
+  const mannerTemperature = Number.isFinite(parsedMannerTemperature)
+    ? parsedMannerTemperature
+    : null;
 
   return (
     <>
@@ -194,8 +224,7 @@ export function ProfileModal({
                   <div className="flex items-start gap-6">
                     <ImageWithFallback
                       src={
-                        // TODO: profileImageId를 presigned-url로 변환하는 로직 필요
-                        profile.profileImageId ||
+                        profileImageUrl ||
                         `https://ui-avatars.com/api/?name=${profile?.nickname}&background=random`
                       }
                       alt={profile.nickname}
@@ -245,7 +274,11 @@ export function ProfileModal({
                     <p className="text-gray-500 text-sm mb-1">매너온도</p>
                     <div className="flex items-center justify-center gap-1 text-blue-600 font-semibold">
                       <Thermometer className="w-4 h-4" />
-                      <p>36.5°C</p>
+                      <p>
+                        {mannerTemperature != null
+                          ? `${mannerTemperature.toFixed(1)}°C`
+                          : '정보 없음'}
+                      </p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4 text-center">
@@ -434,15 +467,15 @@ export function ProfileModal({
           }}
           user={{
             id: profile.id,
-            name: profile.nickname,
-            email: loggedInUser?.profile?.email, // Assuming email is available in loggedInUser
-            profileImage:
-              profile.profileImageId ||
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+            nickname: profile.nickname,
+            email: loggedInUser?.profile?.email,
+            profileImageId: profile.profileImageId ?? null,
             intro: profile.intro || '', // profile.intro를 intro로 직접 전달
             description: profile.description || '', // profile.description을 description으로 직접 전달
-            travelStyles: profile.travelStyles || [],
-            tendency: profile.tendency || [],
+            travelStyles: (profile.travelStyles || []) as TravelStyleType[],
+            tendency: (profile.tendency || []) as TravelTendencyType[],
+            // gender: profile.gender,
+            // mbtiTypes: profile.mbtiTypes,
           }}
         />
       )}
