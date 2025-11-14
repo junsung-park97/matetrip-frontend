@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { MapPin, ClipboardList, Plus, Sparkles, Wand2 } from 'lucide-react';
+import {
+  MapPin,
+  ClipboardList,
+  Plus,
+  Info,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client';
@@ -216,7 +223,7 @@ export function MainPage({
         if (!isMounted) {
           return;
         }
-        console.log('match response', res.data); // res.data is now MatchCandidateDto[]
+        console.log('match response', res.data);
         setMatches(res.data ?? []);
       } catch (err) {
         if (!isMounted) {
@@ -236,14 +243,7 @@ export function MainPage({
     return () => {
       isMounted = false;
     };
-  }, [
-    isAuthLoading,
-    isLoggedIn,
-    user?.userId,
-    travelStyleKey,
-    tendencyKey,
-    descriptionKey,
-  ]);
+  }, [isAuthLoading, isLoggedIn, user?.userId]);
 
   // const handleSearch = (e: React.FormEvent) => {
   //   e?.preventDefault();
@@ -417,7 +417,7 @@ export function MainPage({
               {isRecommendedView && (
                 <p className="text-sm font-medium text-blue-900/80 flex items-center gap-1">
                   <Sparkles className="w-4 h-4 text-pink-500" />
-                  여행 성향·스타일·프로필 상세소개·MBTI를 모두 반영한 맞춤 추천
+                  여행 성향·스타일·프로필 취향·MBTI를 모두 반영한 맞춤 추천
                   리스트예요.
                 </p>
               )}
