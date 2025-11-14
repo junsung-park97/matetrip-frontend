@@ -5,9 +5,9 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client';
 import { type Post } from '../types/post';
 import { MainPostCardSkeleton } from './MainPostCardSkeleton';
-import { MainPostCard } from './MainPostCard';
+import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
-import { Badge } from './ui/badge';
+import type { MatchingInfo } from '../types/matching';
 
 interface MainPageProps {
   onSearch: (params: {
@@ -104,6 +104,20 @@ const normalizeOverlapText = (values?: unknown): string | undefined => {
   }
 
   return normalized.join(', ');
+};
+
+// 임시 매칭 정보 생성 함수 (추후 실제 API로 교체 가능)
+const generateMockMatchingInfo = (index: number): MatchingInfo => {
+  const scores = [92, 85, 78, 73, 68, 65, 62, 58, 55, 52];
+  const tendencies = ['즉흥적', '계획적', '주도적', '따라가는'];
+  const styles = ['호텔', '게스트하우스', '에어비앤비', '캠핑'];
+  
+  return {
+    score: scores[index % scores.length] || 50,
+    tendency: tendencies[index % tendencies.length],
+    style: styles[index % styles.length],
+    vectorscore: Math.floor(Math.random() * 30) + 60, // 60-90 사이 랜덤값
+  };
 };
 
 export function MainPage({
@@ -235,18 +249,14 @@ export function MainPage({
                   추천할 동행이 없습니다.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                  {posts.slice(0, 10).map((post, index) => (
-                    <div key={post.id} className="relative">
-                      {index === 0 && (
-                        <Badge className="absolute -top-2 left-2 z-10 bg-purple-600 text-white px-3 py-1">
-                          Best Match
-                        </Badge>
-                      )}
-                      <MainPostCard post={post as any} onClick={onViewPost} />
-                    </div>
-                  ))}
-                </div>
+                <MatchingCarousel
+                  posts={posts.slice(0, 10)}
+                  matchingInfoByPostId={posts.slice(0, 10).reduce((acc, post, index) => {
+                    acc[post.id] = generateMockMatchingInfo(index);
+                    return acc;
+                  }, {} as Record<string, MatchingInfo>)}
+                  onCardClick={(post) => onViewPost(post.id)}
+                />
               )}
             </section>
           </>

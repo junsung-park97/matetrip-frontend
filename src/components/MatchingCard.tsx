@@ -42,7 +42,7 @@ export function MatchingCard({
       ? Math.min(100, Math.max(0, vectorscore))
       : undefined;
   const isInteractive = typeof onClick === 'function';
-  const cardClassName = `bg-white rounded-2xl border border-blue-50 shadow-lg overflow-hidden mx-4 relative h-full flex flex-col${
+  const cardClassName = `bg-white rounded-2xl border border-blue-50 shadow-lg overflow-hidden mx-6 relative w-[380px] h-full flex flex-col${
     isInteractive
       ? ' cursor-pointer hover:shadow-xl transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500'
       : ''

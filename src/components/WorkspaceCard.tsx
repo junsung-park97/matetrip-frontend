@@ -122,7 +122,7 @@ export function WorkspaceCard({
       <div className="flex flex-col gap-2 px-2">
         {/* 제목 */}
         <div className="relative overflow-hidden">
-          <h3 className="text-xl font-bold text-black leading-tight whitespace-nowrap">{title}</h3>
+          <h3 className="text-lg font-bold text-black leading-tight whitespace-nowrap">{title}</h3>
           {/* 오른쪽 fade 효과 */}
           <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent pointer-events-none" />
         </div>
