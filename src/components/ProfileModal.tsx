@@ -10,6 +10,7 @@ import {
   Star,
   ChevronDown,
   ChevronUp,
+  LogOut,
 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import client from '../api/client'; // prettier-ignore
@@ -29,6 +30,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
   userId: string | null;
   onViewPost: (postId: string) => void;
+  onLogoutClick?: () => void;
 }
 
 interface Review {
@@ -64,6 +66,7 @@ export function ProfileModal({
   onOpenChange,
   userId,
   onViewPost,
+  onLogoutClick,
 }: ProfileModalProps) {
   const { user: loggedInUser } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -296,15 +299,28 @@ export function ProfileModal({
                     </div>
                   </div>
                   {isCurrentUser && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 flex-shrink-0"
-                      onClick={handleEditProfile}
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      프로필 수정
-                    </Button>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9"
+                        onClick={handleEditProfile}
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        프로필 수정
+                      </Button>
+                      {onLogoutClick && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9"
+                          onClick={onLogoutClick}
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          로그아웃
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
 
