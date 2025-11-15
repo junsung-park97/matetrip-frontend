@@ -1,5 +1,12 @@
-import { useState, useEffect } from 'react';
-import { MapPin, SlidersHorizontal, Search } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  MapPin,
+  ClipboardList,
+  Plus,
+  Info,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import client from '../api/client';
@@ -127,9 +134,15 @@ export function MainPage({
   isLoggedIn,
 }: MainPageProps) {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { isAuthLoading } = useAuthStore();
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Single loading state for both sections
+  const { user, isAuthLoading } = useAuthStore(); // Get user and isAuthLoading from auth store
+  const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
+  const [isMatchesLoading, setIsMatchesLoading] = useState(true);
+  const [featuredView, setFeaturedView] = useState<'latest' | 'recommended'>(
+    'latest'
+  );
+     const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -169,6 +182,142 @@ export function MainPage({
     if (searchQuery.trim()) {
       onSearch({ title: searchQuery });
     }
+
+    let isMounted = true;
+
+    const fetchMatches = async () => {
+      setIsMatchesLoading(true);
+      try {
+        const res = await client.post<MatchCandidateDto[]>( //응답타입
+          '/profile/matching/search',
+          {
+            limit: 5, //BODY
+          }
+        );
+        if (!isMounted) {
+          return;
+        }
+        console.log('match response', res.data);
+        setMatches(res.data ?? []);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        console.error('Failed to fetch matches', err);
+      } finally {
+        if (isMounted) {
+          setIsMatchesLoading(false);
+        }
+      }
+    };
+
+    fetchMatches();
+    console.log('matching search 완료!');
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthLoading, isLoggedIn, user?.userId]);
+
+  // const handleSearch = (e: React.FormEvent) => {
+  //   e?.preventDefault();
+  //   onSearch({
+  //     startDate: searchStartDate,
+  //     endDate: searchEndDate,
+  //     location: searchLocation,
+  //     title: searchTitle,
+  //   });
+  // };
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setFeaturedView('latest');
+    }
+  }, [isLoggedIn]);
+
+  const { recommendedPosts, matchingInfoByPostId } = useMemo(() => {
+    const toPercent = (value?: number) => {
+      if (value === undefined || value === null) {
+        return 0;
+      }
+      return Math.round(value <= 1 ? value * 100 : value);
+    };
+
+    const entries: Array<{ post: Post; info: MatchingInfo }> = [];
+    const seenPostIds = new Set<string>();
+
+    matches.forEach((candidate) => {
+      const matchedPost = posts.find((post) => {
+        const writerIds = [
+          post.writerId,
+          post.writer?.id,
+          post.writerProfile?.id,
+        ].filter(Boolean);
+        return writerIds.includes(candidate.userId);
+      });
+
+      if (!matchedPost || seenPostIds.has(matchedPost.id)) {
+        return;
+      }
+
+      seenPostIds.add(matchedPost.id);
+
+      const tendencyText = normalizeOverlapText(
+        candidate.overlappingTendencies
+      );
+
+      const styleText = normalizeOverlapText(candidate.overlappingTravelStyles);
+
+      entries.push({
+        post: matchedPost,
+        info: {
+          score: toPercent(candidate.score),
+          vectorscore:
+            candidate.vectorScore !== undefined
+              ? toPercent(candidate.vectorScore)
+              : undefined,
+          tendency: tendencyText,
+          style: styleText,
+        },
+      });
+    });
+
+    return {
+      recommendedPosts: entries.map((entry) => entry.post),
+      matchingInfoByPostId: entries.reduce<Record<string, MatchingInfo>>(
+        (acc, entry) => {
+          acc[entry.post.id] = entry.info;
+          return acc;
+        },
+        {}
+      ),
+    };
+  }, [matches, posts]);
+
+  const activeFeaturedView =
+    featuredView === 'recommended' && isLoggedIn ? 'recommended' : 'latest';
+
+  const featuredTitle =
+    activeFeaturedView === 'recommended' && user
+      ? `${user?.profile.nickname}님과 성향이 비슷한 유저들이 동행을 구하고 있어요`
+      : '최신 동행 모집';
+
+  const isFeaturedLoading =
+    activeFeaturedView === 'recommended' ? isMatchesLoading : isLoading;
+
+  const featuredItems =
+    activeFeaturedView === 'recommended' ? recommendedPosts : posts;
+
+  const featuredEmptyMessage =
+    activeFeaturedView === 'recommended'
+      ? '추천할 게시글이 없습니다.'
+      : '최신 게시글이 없습니다.';
+
+  const handleFeaturedViewChange = (view: 'latest' | 'recommended') => {
+    if (view === 'recommended' && !isLoggedIn) {
+      return;
+    }
+    setFeaturedView(view);
   };
   
   return (
@@ -244,19 +393,13 @@ export function MainPage({
                     <MainPostCardSkeleton key={index} />
                   ))}
                 </div>
-              ) : posts.length === 0 ? (
-                <div className="text-center text-gray-500 py-10">
-                  추천할 동행이 없습니다.
-                </div>
-              ) : (
-                <MatchingCarousel
-                  posts={posts.slice(0, 10)}
-                  matchingInfoByPostId={posts.slice(0, 10).reduce((acc, post, index) => {
-                    acc[post.id] = generateMockMatchingInfo(index);
-                    return acc;
-                  }, {} as Record<string, MatchingInfo>)}
-                  onCardClick={(post) => onViewPost(post.id)}
-                />
+              </div>
+              {isRecommendedView && (
+                <p className="text-sm font-medium text-blue-900/80 flex items-center gap-1">
+                  <Sparkles className="w-4 h-4 text-pink-500" />
+                  여행 성향·스타일·프로필 취향·MBTI를 모두 반영한 맞춤 추천
+                  리스트예요.
+                </p>
               )}
             </section>
           </>
