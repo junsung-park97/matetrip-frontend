@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MapPin, SlidersHorizontal, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -7,7 +7,7 @@ import { type Post } from '../types/post';
 import { MainPostCardSkeleton } from './MainPostCardSkeleton';
 import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
-import type { MatchingInfo } from '../types/matching';
+import type { MatchingInfo, MatchCandidateDto } from '../types/matching';
 
 interface MainPageProps {
   onSearch: (params: {
@@ -128,8 +128,13 @@ export function MainPage({
 }: MainPageProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthLoading } = useAuthStore();
+  const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
+  const [isMatchesLoading, setIsMatchesLoading] = useState(true);
+  const [featuredView, setFeaturedView] = useState<'latest' | 'recommended'>(
+    'latest'
+  );
   const [searchQuery, setSearchQuery] = useState('');
-  const { isAuthLoading } = useAuthStore();
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -163,6 +168,120 @@ export function MainPage({
     fetchAllPosts();
   }, [isAuthLoading, fetchTrigger]);
 
+  useEffect(() => {
+    if (isAuthLoading || !isLoggedIn || !user?.userId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchMatches = async () => {
+      setIsMatchesLoading(true);
+      try {
+        const res = await client.post<MatchCandidateDto[]>(
+          '/profile/matching/search',
+          {
+            limit: 5,
+          }
+        );
+        if (!isMounted) {
+          return;
+        }
+        console.log('match response', res.data);
+        setMatches(res.data ?? []);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        console.error('Failed to fetch matches', err);
+      } finally {
+        if (isMounted) {
+          setIsMatchesLoading(false);
+        }
+      }
+    };
+
+    fetchMatches();
+    console.log('matching search 완료!');
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthLoading, isLoggedIn, user?.userId]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setFeaturedView('latest');
+    }
+  }, [isLoggedIn]);
+
+  const { recommendedPosts, matchingInfoByPostId } = useMemo(() => {
+    const toPercent = (value?: number) => {
+      if (value === undefined || value === null) {
+        return 0;
+      }
+      return Math.round(value <= 1 ? value * 100 : value);
+    };
+
+    const entries: Array<{ post: Post; info: MatchingInfo }> = [];
+    const seenPostIds = new Set<string>();
+
+    matches.forEach((candidate) => {
+      const matchedPost = posts.find((post) => {
+        const writerIds = [
+          post.writerId,
+          post.writer?.id,
+          post.writerProfile?.id,
+        ].filter(Boolean);
+        return writerIds.includes(candidate.userId);
+      });
+
+      if (!matchedPost || seenPostIds.has(matchedPost.id)) {
+        return;
+      }
+
+      seenPostIds.add(matchedPost.id);
+
+      const tendencyText = normalizeOverlapText(
+        candidate.overlappingTendencies
+      );
+
+      const styleText = normalizeOverlapText(candidate.overlappingTravelStyles);
+
+      entries.push({
+        post: matchedPost,
+        info: {
+          score: toPercent(candidate.score),
+          vectorscore:
+            candidate.vectorScore !== undefined
+              ? toPercent(candidate.vectorScore)
+              : undefined,
+          tendency: tendencyText,
+          style: styleText,
+        },
+      });
+    });
+
+    return {
+      recommendedPosts: entries.map((entry) => entry.post),
+      matchingInfoByPostId: entries.reduce<Record<string, MatchingInfo>>(
+        (acc, entry) => {
+          acc[entry.post.id] = entry.info;
+          return acc;
+        },
+        {}
+      ),
+    };
+  }, [matches, posts]);
+
+  const activeFeaturedView =
+    featuredView === 'recommended' && isLoggedIn ? 'recommended' : 'latest';
+
+  const isFeaturedLoading =
+    activeFeaturedView === 'recommended' ? isMatchesLoading : isLoading;
+
+  const featuredItems =
+    activeFeaturedView === 'recommended' ? recommendedPosts : posts;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,23 +366,27 @@ export function MainPage({
         {/* Recommended Posts Section - 모든 사용자에게 표시 */}
         <section className="mb-12">
           <h2 className="text-xl font-medium text-gray-900 mb-6">AI 추천 동행</h2>
-          {isLoading ? (
+          {isFeaturedLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {Array.from({ length: 5 }).map((_, index) => (
                 <MainPostCardSkeleton key={index} />
               ))}
             </div>
-          ) : posts.length === 0 ? (
+          ) : featuredItems.length === 0 ? (
             <div className="text-center text-gray-500 py-10">
               추천할 동행이 없습니다.
             </div>
           ) : (
             <MatchingCarousel
-              posts={posts.slice(0, 10)}
-              matchingInfoByPostId={posts.slice(0, 10).reduce((acc, post, index) => {
-                acc[post.id] = generateMockMatchingInfo(index);
-                return acc;
-              }, {} as Record<string, MatchingInfo>)}
+              posts={featuredItems.slice(0, 10)}
+              matchingInfoByPostId={
+                activeFeaturedView === 'recommended'
+                  ? matchingInfoByPostId
+                  : featuredItems.slice(0, 10).reduce((acc, post, index) => {
+                      acc[post.id] = generateMockMatchingInfo(index);
+                      return acc;
+                    }, {} as Record<string, MatchingInfo>)
+              }
               onCardClick={handleCardClick}
             />
           )}

@@ -40,6 +40,7 @@ import client from '../api/client';
 import { type Post, type Participation } from '../types/post';
 import { translateKeyword } from '../utils/keyword';
 import { useAuthStore } from '../store/authStore';
+import { API_BASE_URL } from '../api/client';
 
 interface PostDetailProps {
   postId: string;
@@ -58,14 +59,9 @@ type ProfileWithMannerTemperature = {
 const formatMannerTemperature = (
   profile?: ProfileWithMannerTemperature | null
 ) => {
-  const raw =
-    profile?.mannerTemperature ?? profile?.mannerTemp ?? null;
+  const raw = profile?.mannerTemperature ?? profile?.mannerTemp ?? null;
   const parsed =
-    typeof raw === 'number'
-      ? raw
-      : raw != null
-      ? Number(raw)
-      : null;
+    typeof raw === 'number' ? raw : raw != null ? Number(raw) : null;
 
   return typeof parsed === 'number' && Number.isFinite(parsed)
     ? `${parsed.toFixed(1)}°C`
@@ -80,6 +76,9 @@ export function PostDetail({
   onOpenChange,
   onDeleteSuccess,
 }: PostDetailProps) {
+  const [remoteCoverImageUrl, setRemoteCoverImageUrl] = useState<string | null>(
+    null
+  );
   const { user } = useAuthStore();
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +88,12 @@ export function PostDetail({
   const [approvedParticipants, setApprovedParticipants] = useState<
     Participation[]
   >([]);
+  const [writerProfileImageUrl, setWriterProfileImageUrl] = useState<
+    string | null
+  >(null);
+  const [participantProfileUrls, setParticipantProfileUrls] = useState<
+    Record<string, string | null>
+  >({});
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
@@ -100,7 +105,21 @@ export function PostDetail({
     try {
       const postResponse = await client.get<Post>(`/posts/${postId}`);
       const fetchedPost = postResponse.data;
+      console.log('PostDetail fetched post', fetchedPost);
       setPost(fetchedPost);
+      if (fetchedPost.imageId) {
+        try {
+          const payload = await client.get<{ url: string }>(
+            `/binary-content/${fetchedPost.imageId}/presigned-url`
+          );
+          setRemoteCoverImageUrl(payload.data.url);
+        } catch (imageErr) {
+          console.error('Post detail cover image load failed:', imageErr);
+          setRemoteCoverImageUrl(null);
+        }
+      } else {
+        setRemoteCoverImageUrl(null);
+      }
 
       const allParticipations = fetchedPost.participations || [];
       setParticipations(allParticipations);
@@ -121,6 +140,82 @@ export function PostDetail({
   useEffect(() => {
     fetchPostDetail();
   }, [fetchPostDetail]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const profileImageId = post?.writer?.profile?.profileImageId;
+
+    if (!profileImageId) {
+      setWriterProfileImageUrl(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const { data } = await client.get<{ url: string }>(
+          `/binary-content/${profileImageId}/presigned-url`
+        );
+        if (!cancelled) {
+          setWriterProfileImageUrl(data.url);
+        }
+      } catch (err) {
+        console.error('PostDetail writer image load failed:', err);
+        if (!cancelled) {
+          setWriterProfileImageUrl(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post?.writer?.profile?.profileImageId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const imageIds = participations
+      .map((p) => p.requester.profile?.profileImageId)
+      .filter((id): id is string => Boolean(id));
+
+    if (!imageIds.length) {
+      setParticipantProfileUrls({});
+      return;
+    }
+
+    const uniqueIds = Array.from(new Set(imageIds));
+
+    (async () => {
+      try {
+        const results = await Promise.all(
+          uniqueIds.map(async (imageId) => {
+            try {
+              const { data } = await client.get<{ url: string }>(
+                `/binary-content/${imageId}/presigned-url`
+              );
+              return { imageId, url: data.url };
+            } catch (err) {
+              console.error('PostDetail participant image load failed:', err);
+              return { imageId, url: null };
+            }
+          })
+        );
+        if (cancelled) {
+          return;
+        }
+        const nextMap: Record<string, string | null> = {};
+        for (const { imageId, url } of results) {
+          nextMap[imageId] = url;
+        }
+        setParticipantProfileUrls(nextMap);
+      } catch (err) {
+        console.error('PostDetail participant image batch load failed:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [participations]);
 
   const isAuthor = user && post ? user.userId === post?.writer?.id : false;
   const isLoggedIn = !!user;
@@ -366,7 +461,7 @@ export function PostDetail({
                   <div className="flex items-start gap-4 p-4 bg-white rounded-xl border h-full">
                     <ImageWithFallback
                       src={
-                        post.writer?.profile?.profileImageId ??
+                        writerProfileImageUrl ??
                         `https://ui-avatars.com/api/?name=${post.writer?.profile?.nickname}&background=random`
                       }
                       alt={post.writer?.profile?.nickname}
@@ -407,11 +502,13 @@ export function PostDetail({
                   </div>
                 </div>
 
-                <div className="flex-1">
-                  <div className="relative w-full h-full max-h-[200px] rounded-xl overflow-hidden bg-gray-100">
+                <div className="flex-1 flex justify-center">
+                  <div className="relative w-full max-w-[450px] min-h-[200px] max-h-[400px] rounded-xl overflow-hidden bg-gray-100">
                     <ImageWithFallback
                       src={
-                        'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80'
+                        remoteCoverImageUrl ||
+                        'https://via.placeholder.com/400x300'
+                        //'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80'
                       }
                       alt={post.title}
                       className="w-full h-full object-cover"
@@ -444,7 +541,11 @@ export function PostDetail({
                         <div className="flex items-start gap-3">
                           <ImageWithFallback
                             src={
-                              p.requester.profile.profileImageId ??
+                              (p.requester.profile.profileImageId
+                                ? (participantProfileUrls[
+                                    p.requester.profile.profileImageId
+                                  ] ?? null)
+                                : null) ??
                               `https://ui-avatars.com/api/?name=${p.requester.profile.nickname}&background=random`
                             }
                             alt={p.requester.profile.nickname}
@@ -458,14 +559,13 @@ export function PostDetail({
                               <div className="flex items-center gap-1 text-sm text-blue-600">
                                 <Thermometer className="w-4 h-4" />
                                 <span>
-                                  {formatMannerTemperature(
-                                    p.requester.profile
-                                  )}
+                                  {formatMannerTemperature(p.requester.profile)}
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                              {p.requester.profile.travelStyles?.map(
+                              {/* 😨동행자 키워드  주석 처리  */}
+                              {/* {p.requester.profile.travelStyles?.map(
                                 (style, idx) => (
                                   <span
                                     key={idx}
@@ -474,7 +574,7 @@ export function PostDetail({
                                     #{translateKeyword(style)}
                                   </span>
                                 )
-                              )}
+                              )} */}
                             </div>
                           </div>
                           <Button
@@ -510,7 +610,11 @@ export function PostDetail({
                         <div className="flex items-start gap-3">
                           <ImageWithFallback
                             src={
-                              request.requester.profile.profileImageId ??
+                              (request.requester.profile.profileImageId
+                                ? (participantProfileUrls[
+                                    request.requester.profile.profileImageId
+                                  ] ?? null)
+                                : null) ??
                               `https://ui-avatars.com/api/?name=${request.requester.profile.nickname}&background=random`
                             }
                             alt={request.requester.profile.nickname}
@@ -531,7 +635,8 @@ export function PostDetail({
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                              {request.requester.profile.travelStyles?.map(
+                              {/* 😨동행 신청자 키워드  주석 처리  */}
+                              {/* {request.requester.profile.travelStyles?.map(
                                 (style, idx) => (
                                   <span
                                     key={idx}
@@ -540,7 +645,7 @@ export function PostDetail({
                                     #{translateKeyword(style)}
                                   </span>
                                 )
-                              )}
+                              )} */}
                             </div>
                           </div>
                           <Button

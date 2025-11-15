@@ -1,8 +1,12 @@
+import { useEffect, useState, useCallback } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { MapPin, Calendar, Users } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { translateKeyword } from '../utils/keyword';
 import type { Post } from '../types/post';
+import { API_BASE_URL } from '../api/client';
+import client from '../api/client';
+import { useAuthStore } from '../store/authStore';
 
 interface WorkspaceCardProps {
   post: Post;
@@ -41,28 +45,160 @@ export function WorkspaceCard({
     return diffDays;
   };
 
-  // API 응답에 커버 이미지가 없으므로 임시 플레이스홀더를 사용합니다.
-  const coverImage = 'https://via.placeholder.com/400x300';
+  const defaultCoverImage = 'https://via.placeholder.com/400x300';
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+  const [profileImageUrls, setProfileImageUrls] = useState<
+    Record<string, string | null>
+  >({});
+  const { user } = useAuthStore();
+
+  const resolveProfileImageId = useCallback(
+    (ownerId?: string, originalId?: string | null) => {
+      if (ownerId && ownerId === user?.userId) {
+        return user?.profile?.profileImageId ?? null;
+      }
+      return originalId ?? null;
+    },
+    [user?.profile?.profileImageId, user?.userId]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCoverImage = async () => {
+      if (!post.imageId) {
+        setCoverImageUrl(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/binary-content/${post.imageId}/presigned-url`,
+          {
+            credentials: 'include',
+            //cache: 'no-store',
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('게시글 이미지를 불러오지 못했습니다.');
+        }
+
+        const payload = await response.json();
+        //console.log('WorkspaceCard presigned payload', post.imageId, payload);
+        const { url } = payload;
+        if (!cancelled) {
+          setCoverImageUrl(url);
+        }
+      } catch (error) {
+        console.error('WorkspaceCard cover image load failed:', error);
+        if (!cancelled) {
+          setCoverImageUrl(null);
+        }
+      }
+    };
+
+    fetchCoverImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post.imageId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProfileImages = async () => {
+      const imageIds = [
+        resolveProfileImageId(writer?.id, writer?.profile?.profileImageId),
+        ...(participations || [])
+          .filter((p) => p.status === '승인')
+          .map((p) =>
+            resolveProfileImageId(
+              p.requester.id,
+              p.requester.profile?.profileImageId
+            )
+          ),
+      ].filter((id): id is string => Boolean(id));
+
+      if (imageIds.length === 0) {
+        setProfileImageUrls({});
+        return;
+      }
+
+      const uniqueIds = Array.from(new Set(imageIds));
+      // console.log('WorkspaceCard profile image IDs', uniqueIds);
+
+      try {
+        const responses = await Promise.all(
+          uniqueIds.map(async (imageId) => {
+            try {
+              const { data } = await client.get<{ url: string }>(
+                `/binary-content/${imageId}/presigned-url`
+              );
+              return { imageId, url: data.url };
+            } catch (error) {
+              console.error('WorkspaceCard profile image load failed:', error);
+              return { imageId, url: null };
+            }
+          })
+        );
+
+        if (cancelled) return;
+
+        const nextMap: Record<string, string | null> = {};
+        for (const { imageId, url } of responses) {
+          nextMap[imageId] = url;
+        }
+        setProfileImageUrls(nextMap);
+      } catch (err) {
+        console.error('WorkspaceCard profile image batch load failed:', err);
+      }
+    };
+
+    fetchProfileImages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    writer?.profile?.profileImageId,
+    writer?.id,
+    participations,
+    resolveProfileImageId,
+  ]);
 
   // 참여자 목록을 구성합니다. writer와 participations를 사용합니다.
   const displayParticipants = [
     {
       id: writer?.id,
-      name: writer?.profile?.nickname || '알 수 없음', // nullish coalescing operator 추가
-      profileImage:
-        writer?.profile?.profileImageId ||
-        `https://ui-avatars.com/api/?name=${writer?.profile?.nickname}&background=random`,
+      name: writer?.profile?.nickname || '알 수 없음',
+      profileImageId: resolveProfileImageId(
+        writer?.id,
+        writer?.profile?.profileImageId ?? null
+      ),
+      fallback: `https://ui-avatars.com/api/?name=${writer?.profile?.nickname}&background=random`,
     },
     ...(participations || [])
       .filter((p) => p.status === '승인')
       .map((p) => ({
         id: p.requester.id,
-        name: p.requester.profile?.nickname || '알 수 없음', // nullish coalescing operator 추가
-        profileImage:
-          p.requester.profile?.profileImageId ||
-          `https://ui-avatars.com/api/?name=${p.requester.profile?.nickname}&background=random`,
+        name: p.requester.profile?.nickname || '알 수 없음',
+        profileImageId: resolveProfileImageId(
+          p.requester.id,
+          p.requester.profile?.profileImageId ?? null
+        ),
+        fallback: `https://ui-avatars.com/api/?name=${p.requester.profile?.nickname}&background=random`,
       })),
   ];
+
+  // useEffect(() => {
+  //   console.log('WorkspaceCard writer profile', writer?.profile);
+  //   console.log(
+  //     'WorkspaceCard participant profiles',
+  //     (participations || []).map((p) => p.requester.profile)
+  //   );
+  // }, [writer?.profile, participations]);
 
   return (
     <div
@@ -74,7 +210,7 @@ export function WorkspaceCard({
         {/* 커버 이미지 */}
         <div className="h-[252px] rounded-2xl overflow-hidden relative">
           <ImageWithFallback
-            src={coverImage}
+            src={coverImageUrl ?? defaultCoverImage}
             alt={title}
             className="w-full h-full object-cover"
           />
@@ -146,17 +282,23 @@ export function WorkspaceCard({
       <div className="flex items-center gap-2 px-2">
         {/* 참여자 프로필 이미지 (중첩) */}
         <div className="flex -space-x-8">
-          {displayParticipants.slice(0, 3).map((participant, index) =>
-            participant && (
+          {displayParticipants.slice(0, 3).map((participant, index) => {
+            if (!participant) return null;
+
+            const resolvedUrl = participant.profileImageId
+              ? profileImageUrls[participant.profileImageId]
+              : undefined;
+
+            return (
               <ImageWithFallback
                 key={participant.id}
-                src={participant.profileImage}
+                src={resolvedUrl ?? participant.fallback}
                 alt={participant.name}
                 className="w-8 h-8 rounded-full object-cover"
                 style={{ zIndex: displayParticipants.length - index }}
               />
-            )
-          )}
+            );
+          })}
         </div>
         
         {/* 모집 인원 */}

@@ -21,6 +21,14 @@ import type { MbtiType } from '../constants/mbti.ts';
 interface EditProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // onProfileUpdated?: (updates: {
+  //   nickname: string;
+  //   intro: string;
+  //   description: string;
+  //   travelStyles: TravelStyleType[];
+  //   tendency: TravelTendencyType[];
+  //   profileImageId: string | null;
+  // }) => void;
   user: {
     id: string;
     nickname: string;
@@ -38,6 +46,7 @@ interface EditProfileModalProps {
 export function EditProfileModal({
   open,
   onOpenChange,
+  //onProfileUpdated,
   user,
 }: EditProfileModalProps) {
   const [activeTab, setActiveTab] = useState('edit');
@@ -50,8 +59,6 @@ export function EditProfileModal({
   const [selectedTravelTendencies, setSelectedTravelTendencies] = useState<
     TravelTendencyType[]
   >(user?.tendency || []);
-  const [gender, setGender] = useState<GenderType>(user?.gender || '남성');
-  const [mbti, setMbti] = useState<MbtiType>(user?.mbtiTypes || 'ENFP');
   const [currentProfileImageId, setCurrentProfileImageId] = useState<
     string | null
   >(user?.profileImageId ?? null);
@@ -64,6 +71,13 @@ export function EditProfileModal({
   const [pendingProfileImageFile, setPendingProfileImageFile] =
     useState<File | null>(null);
   const profileImagePreviewRef = useRef<string | null>(null);
+  const originalDescriptionRef = useRef<string>(user?.description ?? '');
+  const originalTravelStylesRef = useRef<TravelStyleType[]>(
+    user?.travelStyles || []
+  );
+  const originalTravelTendenciesRef = useRef<TravelTendencyType[]>(
+    user?.tendency || []
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isImageDeleting, setIsImageDeleting] = useState(false);
@@ -82,10 +96,11 @@ export function EditProfileModal({
     setNickname(user.nickname || '');
     setShortBio(user.intro || '');
     setDetailedBio(user.description || '');
+    originalDescriptionRef.current = user.description || '';
     setSelectedTravelStyles(user.travelStyles || []);
     setSelectedTravelTendencies(user.tendency || []);
-    setGender(user.gender || '남성');
-    setMbti(user.mbtiTypes || 'ENFP');
+    originalTravelStylesRef.current = user.travelStyles || [];
+    originalTravelTendenciesRef.current = user.tendency || [];
     setCurrentProfileImageId(user.profileImageId ?? null);
     setPendingProfileImageFile(null);
     setProfileImagePreview(null);
@@ -228,10 +243,6 @@ export function EditProfileModal({
     alert('사용 가능한 닉네임입니다.');
   };
 
-  const handleRemoveStyle = (style: TravelStyleType) => {
-    setSelectedTravelStyles(selectedTravelStyles.filter((s) => s !== style));
-  };
-
   // const handleAddStyle = (style: TravelStyleType) => {
   //   if (!selectedTravelStyles.includes(style)) {
   //     setSelectedTravelStyles([...selectedTravelStyles, style]);
@@ -246,6 +257,18 @@ export function EditProfileModal({
     );
   };
 
+  const handleToggleTendency = (style: TravelTendencyType) => {
+    setSelectedTravelTendencies((prev) =>
+      prev.includes(style)
+        ? prev.filter((item) => item !== style)
+        : [...prev, style]
+    );
+  };
+
+  const handleRemoveStyle = (style: TravelStyleType) => {
+    setSelectedTravelStyles(selectedTravelStyles.filter((s) => s !== style));
+  };
+
   const handleRemoveTendency = (tendency: TravelTendencyType) => {
     setSelectedTravelTendencies(
       selectedTravelTendencies.filter((t) => t !== tendency)
@@ -257,14 +280,6 @@ export function EditProfileModal({
   //     setSelectedTravelTendencies([...selectedTravelTendencies, tendency]);
   //   }
   // };
-
-  const handleToggleTendency = (tendency: TravelTendencyType) => {
-    setSelectedTravelTendencies((prev) =>
-      prev.includes(tendency)
-        ? prev.filter((item) => item !== tendency)
-        : [...prev, tendency]
-    );
-  };
 
   //👀 save API  호출
   const handleSaveProfile = async () => {
@@ -297,7 +312,6 @@ export function EditProfileModal({
         const s3Response = await fetch(uploadUrl, {
           method: 'PUT',
           body: file,
-          headers: { 'Content-Type': safeFileType },
         });
         if (!s3Response.ok) {
           throw new Error('이미지 업로드에 실패했습니다.');
@@ -305,14 +319,21 @@ export function EditProfileModal({
         nextProfileImageId = binaryContentId;
       }
 
+      // const descriptionChanged =
+      //   (originalDescriptionRef.current ?? '') !== detailedBio;
+      // const stylesChanged =
+      //   JSON.stringify(originalTravelStylesRef.current) !==
+      //   JSON.stringify(selectedTravelStyles);
+      // const tendenciesChanged =
+      //   JSON.stringify(originalTravelTendenciesRef.current) !==
+      //   JSON.stringify(selectedTravelTendencies);
+
       const payload: UpdateProfileDto = {
         nickname,
         intro: shortBio,
         description: detailedBio,
         travelStyles: selectedTravelStyles,
         tendency: selectedTravelTendencies,
-        gender: gender,
-        mbtiTypes: mbti,
         profileImageId: nextProfileImageId,
       };
       // 사진외의 프로필 수정
@@ -328,6 +349,25 @@ export function EditProfileModal({
         throw new Error(detail || '프로필 업데이트에 실패했습니다.');
       }
 
+      // //📌상세소개가 호출 변경되는 경우에는 임베딩 진행
+      // if (descriptionChanged || stylesChanged || tendenciesChanged) {
+      //   try {
+      //     await fetch(`${API_BASE_URL}/profile/embedding`, {
+      //       method: 'POST',
+      //       headers: { 'Content-Type': 'application/json' },
+      //       credentials: 'include',
+      //       body: JSON.stringify({
+      //         description: detailedBio,
+      //         travelStyles: selectedTravelStyles,
+      //         tendency: selectedTravelTendencies,
+      //       }),
+      //     });
+      //   } catch (error) {
+      //     console.error('프로필 임베딩 갱신 실패:', error);
+      //   }
+      // }
+
+      //변경되면 호출(새로고침)
       useAuthStore.setState((state) => {
         if (!state.user) {
           return state;
@@ -343,18 +383,20 @@ export function EditProfileModal({
               description: detailedBio,
               travelStyles: selectedTravelStyles,
               tendency: selectedTravelTendencies,
-              gender: gender,
-              mbtiTypes: mbti,
               profileImageId: nextProfileImageId ?? null,
             },
           },
         };
       });
+      originalDescriptionRef.current = detailedBio;
+      originalTravelStylesRef.current = selectedTravelStyles;
+      originalTravelTendenciesRef.current = selectedTravelTendencies;
 
       setPendingProfileImageFile(null);
       updateProfileImagePreview(null);
       setCurrentProfileImageId(nextProfileImageId ?? null);
       onOpenChange(false);
+      //   window.location.reload();
     } catch (error) {
       console.error('프로필 저장 실패:', error);
       setSaveError(
@@ -436,7 +478,7 @@ export function EditProfileModal({
                   <div className="flex items-start gap-6">
                     <div className="relative group">
                       <div className="relative w-32 h-32 rounded-full overflow-hidden bg-white ring-2 ring-gray-200 ring-offset-2 ring-offset-white transition-all group-hover:ring-gray-300">
-                        {/* res.json()에서 받은 url을 <img src={url}>로 쓰면 브라우저가 그 URL을 이용해 S3에서 실제 이미지를 내려 받는 HTTP 요청을 자동으로 보내는데,
+                        {/* res.json()에서 받은 url을 <img src={url}>로 쓰면 브라우저가 그 URL을 이용해 S3에서 실제 이미지를 내려 받는 HTTP 요청을 자동으로 보내는데, 
                         이건 코드로 직접 쓰진 않아도 브라우저 레벨에서 발생하는 2번째 호출 */}
                         {profileImageUrl ? (
                           <ImageWithFallback
