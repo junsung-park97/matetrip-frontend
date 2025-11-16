@@ -42,19 +42,20 @@ export function Sidebar({
   };
 
   return (
-    <div 
-      className={`bg-white border-r border-gray-200 h-screen flex flex-col shrink-0 transition-all duration-300 ${
-        isExpanded ? 'w-[185px]' : 'w-[84px]'
-      }`}
-    >
+    <div className="flex items-center shrink-0">
+      <div 
+        className={`bg-white border-r border-gray-200 h-screen flex flex-col shrink-0 transition-all duration-300 ${
+          isExpanded ? 'w-[210px]' : 'w-[84px]'
+        }`}
+      >
       {/* Logo Section */}
       <div className="border-b border-gray-200 px-6 py-6 h-[81px] flex items-center">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 bg-[#101828] rounded-[10px] flex items-center justify-center shrink-0">
             <Map className="w-5 h-5 text-white" />
           </div>
           {isExpanded && (
-            <span className="text-xl font-semibold text-gray-900 whitespace-nowrap">
+            <span className="text-2xl text-gray-900 whitespace-nowrap" style={{ fontFamily: 'Princess Sofia, cursive' }}>
               MateTrip
             </span>
           )}
@@ -62,108 +63,119 @@ export function Sidebar({
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 py-4">
+      <nav className="flex-1 px-4 py-4 flex flex-col justify-between">
         <div className="flex flex-col gap-1">
           {/* AI Chat */}
           <button
             onClick={handleAIChatClick}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+            className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+              isExpanded ? 'px-4' : 'justify-center'
+            } ${
               isActive('/ai-chat')
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-[#101828] text-white'
+                : 'text-[#364153] hover:bg-gray-100'
             }`}
             title={!isExpanded ? 'AI Chat' : ''}
           >
             <MessageSquare className="w-5 h-5 shrink-0" />
-            {isExpanded && <span className="font-medium whitespace-nowrap">AI Chat</span>}
+            {isExpanded && <span className="font-normal text-base whitespace-nowrap">AI Chat</span>}
           </button>
 
           {/* AI 동행 찾기 */}
           <button
             onClick={() => navigate('/')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+            className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+              isExpanded ? 'px-4' : 'justify-center'
+            } ${
               isActive('/')
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-[#101828] text-white'
+                : 'text-[#364153] hover:bg-gray-100'
             }`}
             title={!isExpanded ? 'AI 동행 찾기' : ''}
           >
             <Plane className="w-5 h-5 shrink-0" />
-            {isExpanded && <span className="font-medium whitespace-nowrap">AI 동행 찾기</span>}
+            {isExpanded && <span className="font-normal text-base whitespace-nowrap">AI 동행 찾기</span>}
+          </button>
+
+          {/* 모든 동행 */}
+          <button
+            onClick={() => navigate('/all-posts')}
+            className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+              isExpanded ? 'px-4' : 'justify-center'
+            } ${
+              isActive('/all-posts')
+                ? 'bg-[#101828] text-white'
+                : 'text-[#364153] hover:bg-gray-100'
+            }`}
+            title={!isExpanded ? '모든 동행' : ''}
+          >
+            <FileText className="w-5 h-5 shrink-0" />
+            {isExpanded && <span className="font-normal text-base whitespace-nowrap">모든 동행</span>}
           </button>
 
           {/* SAVE - 로그인 사용자만 */}
           {isLoggedIn && (
             <button
               onClick={() => navigate('/save')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+                isExpanded ? 'px-4' : 'justify-center'
+              } ${
                 isActive('/save')
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-[#101828] text-white'
+                  : 'text-[#364153] hover:bg-gray-100'
               }`}
               title={!isExpanded ? 'SAVE' : ''}
             >
               <Heart className="w-5 h-5 shrink-0" />
-              {isExpanded && <span className="font-medium whitespace-nowrap">SAVE</span>}
+              {isExpanded && <span className="font-normal text-base whitespace-nowrap">SAVE</span>}
             </button>
           )}
 
           {/* Inspiration */}
           <button
             onClick={() => navigate('/inspiration')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+            className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+              isExpanded ? 'px-4' : 'justify-center'
+            } ${
               isActive('/inspiration')
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-[#101828] text-white'
+                : 'text-[#364153] hover:bg-gray-100'
             }`}
             title={!isExpanded ? 'Inspiration' : ''}
           >
             <Sparkles className="w-5 h-5 shrink-0" />
-            {isExpanded && <span className="font-medium whitespace-nowrap">Inspiration</span>}
-          </button>
-
-          {/* 모든 동행 */}
-          <button
-            onClick={() => navigate('/all-posts')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              isActive('/all-posts')
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-            title={!isExpanded ? '모든 동행' : ''}
-          >
-            <FileText className="w-5 h-5 shrink-0" />
-            {isExpanded && <span className="font-medium whitespace-nowrap">모든 동행</span>}
+            {isExpanded && <span className="font-normal text-base whitespace-nowrap">Inspiration</span>}
           </button>
         </div>
-      </nav>
 
-      {/* Toggle Button */}
-      <div className="px-4 py-2">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 transition-colors"
-          title={isExpanded ? '사이드바 축소' : '사이드바 확장'}
-        >
-          {isExpanded ? (
-            <ChevronLeft className="w-5 h-5 text-gray-600" />
-          ) : (
-            <ChevronRight className="w-5 h-5 text-gray-600" />
-          )}
-        </button>
-      </div>
+        {/* Vertical Mate Trip Text */}
+        <div className="flex justify-center py-4">
+          <div 
+            className="text-2xl text-[#101828] whitespace-nowrap" 
+            style={{ 
+              fontFamily: 'Princess Sofia, cursive',
+              writingMode: 'vertical-rl',
+              transform: 'rotate(180deg)'
+            }}
+          >
+            Mate Trip
+          </div>
+        </div>
+      </nav>
 
       {/* Bottom Section */}
       <div className="border-t border-gray-200 px-4 py-4">
         {/* Profile or Login Section */}
         {isLoggedIn ? (
-          <div className="flex items-center gap-3 px-2 py-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <div className="flex flex-col gap-10 items-center">
             <button
               onClick={onProfileClick}
-              className="flex items-center gap-3 flex-1 min-w-0"
+              className={`flex items-center gap-3 w-full rounded-[10px] hover:bg-gray-100 transition-colors ${
+                isExpanded ? 'px-0' : 'justify-center'
+              }`}
               title={!isExpanded ? user?.profile?.nickname || '내 프로필' : ''}
             >
-              <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-[#e5e7eb] overflow-hidden flex items-center justify-center flex-shrink-0">
                 {user?.profile?.profileImageId ? (
                   <img
                     src={user.profile.profileImageId}
@@ -180,14 +192,15 @@ export function Sidebar({
               </div>
               {isExpanded && (
                 <div className="flex-1 text-left overflow-hidden">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {user?.profile?.nickname || '사용자'}
+                  <p className="text-sm font-normal text-gray-900 truncate">
+                    내 프로필
                   </p>
-                  <p className="text-xs text-gray-500">내 프로필</p>
                 </div>
               )}
             </button>
-            {isExpanded && <NotificationPanel />}
+            <div className={`flex ${isExpanded ? 'justify-end w-full' : 'justify-center'}`}>
+              <NotificationPanel />
+            </div>
           </div>
         ) : (
           <Button
@@ -202,6 +215,20 @@ export function Sidebar({
           </Button>
         )}
       </div>
+      </div>
+
+      {/* Toggle Button - 사이드바 외부 오른쪽 */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-6 h-20 flex items-center justify-center hover:bg-gray-100 rounded transition-colors ml-0"
+        title={isExpanded ? '사이드바 축소' : '사이드바 확장'}
+      >
+        {isExpanded ? (
+          <ChevronLeft className="w-5 h-5 text-gray-600" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-gray-600" />
+        )}
+      </button>
     </div>
   );
 }

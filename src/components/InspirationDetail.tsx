@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { Map as KakaoMap, MapMarker } from 'react-kakao-maps-sdk';
 import { Button } from './ui/button';
 import { InspirationCard } from './InspirationCard';
-// import client from '../api/client';
+import client from '../api/client';
 
 // 장소 상세 정보 타입
 interface PlaceDetail {
@@ -25,9 +25,33 @@ interface NearbyPlace {
   imageUrl?: string;
 }
 
+// InspirationPage에서 전달받는 state 타입
+interface LocationState {
+  title?: string;
+  address?: string;
+  summary?: string;
+  imageUrl?: string;
+}
+
+// 백엔드 API 응답 타입 (GET /places/{placeId})
+interface PlaceApiResponse {
+  id: string;
+  category: string;
+  title: string;
+  address: string;
+  summary?: string;
+  image_url?: string;
+  longitude: number;
+  latitude: number;
+}
+
 export function InspirationDetail() {
   const { placeId } = useParams<{ placeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // InspirationPage에서 전달받은 데이터
+  const passedData = location.state as LocationState | null;
 
   const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
@@ -40,41 +64,44 @@ export function InspirationDetail() {
 
       setIsLoading(true);
       try {
-        /*
-         * TODO: 백엔드에서 장소 상세 정보 API 구현 후 활성화
-         * API 엔드포인트: GET /places/{placeId}
-         *
-         * 필요한 응답 데이터:
-         * - id: string (장소 고유 ID)
-         * - title: string (장소명)
-         * - address: string (장소 주소)
-         * - image_url?: string (장소 이미지 URL)
-         * - summary?: string (장소 소개/설명)
-         * - latitude: number (위도)
-         * - longitude: number (경도)
-         *
-         * const response = await client.get<PlaceDetail>(`/places/${placeId}`);
-         * setPlaceDetail(response.data);
-         */
+        // InspirationPage에서 전달받은 데이터가 있으면 먼저 UI에 표시
+        if (passedData?.title) {
+          const detailFromState: PlaceDetail = {
+            id: placeId,
+            title: passedData.title,
+            address: passedData.address || '',
+            imageUrl: passedData.imageUrl,
+            summary: passedData.summary,
+            // 좌표는 API에서 가져올 예정
+            latitude: undefined,
+            longitude: undefined,
+          };
+          setPlaceDetail(detailFromState);
+        }
 
-        // 임시 더미 데이터 (API 구현 전까지 사용)
-        const dummyDetail: PlaceDetail = {
-          id: placeId,
-          title: '서울 그랜드 호텔',
-          address: '서울특별시 강남구 테헤란로 123',
-          imageUrl: undefined,
-          summary:
-            '서울의 중심부에 위치한 럭셔리 호텔입니다. 최고급 시설과 서비스를 제공하며, 비즈니스와 관광객 모두에게 완벽한 숙박 경험을 선사합니다.',
-          latitude: 37.5665,
-          longitude: 126.978,
+        // API에서 장소 상세 정보 가져오기 (좌표 포함)
+        const response = await client.get<PlaceApiResponse>(
+          `/places/${placeId}`
+        );
+        const apiData = response.data;
+
+        // API 응답으로 상세 정보 업데이트
+        const updatedDetail: PlaceDetail = {
+          id: apiData.id,
+          title: passedData?.title || apiData.title,
+          address: passedData?.address || apiData.address,
+          imageUrl: passedData?.imageUrl || apiData.image_url,
+          summary: passedData?.summary || apiData.summary,
+          latitude: apiData.latitude,
+          longitude: apiData.longitude,
         };
-        setPlaceDetail(dummyDetail);
+        setPlaceDetail(updatedDetail);
 
         // 지도 중심 설정
-        if (dummyDetail.latitude && dummyDetail.longitude) {
+        if (apiData.latitude && apiData.longitude) {
           setMapCenter({
-            lat: dummyDetail.latitude,
-            lng: dummyDetail.longitude,
+            lat: apiData.latitude,
+            lng: apiData.longitude,
           });
         }
 
@@ -95,8 +122,8 @@ export function InspirationDetail() {
          *
          * const nearbyResponse = await client.get<NearbyPlace[]>('/places/nearby', {
          *   params: {
-         *     latitude: dummyDetail.latitude,
-         *     longitude: dummyDetail.longitude,
+         *     latitude: apiData.latitude,
+         *     longitude: apiData.longitude,
          *     limit: 4,
          *   },
          * });
@@ -135,11 +162,11 @@ export function InspirationDetail() {
     };
 
     fetchPlaceDetail();
-  }, [placeId]);
+  }, [placeId, passedData]);
 
   const handlePlanTrip = () => {
     // CreatePostModal로 라우팅 (장소 정보 전달: 이름, 주소, 좌표)
-    navigate('/create-post', {
+    navigate('/post', {
       state: {
         placeId: placeDetail?.id,
         placeName: placeDetail?.title,
@@ -187,7 +214,7 @@ export function InspirationDetail() {
   return (
     <div className="bg-gray-50 h-screen flex">
       {/* 메인 콘텐츠 영역 */}
-      <div className="lg:w-[776px] bg-white border-r border-gray-200 overflow-y-auto h-full">
+      <div className="lg:w-[676px] bg-white border-r border-gray-200 overflow-y-auto h-full">
         {/* 상단 이미지 및 장소 정보 */}
         <div
           className="relative h-[490px] rounded-b-xl bg-cover bg-center flex flex-col justify-end p-8"
