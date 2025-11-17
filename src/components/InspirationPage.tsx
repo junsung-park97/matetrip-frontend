@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Compass, Loader2 } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { InspirationCard } from './InspirationCard';
@@ -11,6 +12,9 @@ interface PopularPlaceResponse {
   title: string;
   address: string;
   image_url?: string;
+  summary?: string;
+  latitude: number;
+  longitude: number;
 }
 
 // 프론트엔드 내부 타입
@@ -19,6 +23,9 @@ interface Place {
   title: string;
   address: string;
   imageUrl?: string;
+  summary?: string;
+  latitude: number;
+  longitude: number;
   badgeText?: string;
 }
 
@@ -27,6 +34,7 @@ interface InspirationPageProps {
 }
 
 export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
+  const navigate = useNavigate();
   const [places, setPlaces] = useState<Place[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -41,12 +49,18 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
   const ITEMS_PER_PAGE = 20;
 
   // 백엔드 응답을 프론트엔드 타입으로 변환
-  const transformResponse = (data: PopularPlaceResponse[], startIndex: number): Place[] => {
+  const transformResponse = (
+    data: PopularPlaceResponse[],
+    startIndex: number
+  ): Place[] => {
     return data.map((item, index) => ({
       id: item.addplace_id,
       title: item.title,
       address: item.address,
       imageUrl: item.image_url,
+      summary: item.summary,
+      latitude: item.latitude,
+      longitude: item.longitude,
       badgeText: `현재 가장 인기있는 장소 TOP. ${startIndex + index + 1}`,
     }));
   };
@@ -60,12 +74,15 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
     setHasMore(true);
 
     try {
-      const response = await client.get<PopularPlaceResponse[]>('/places/popular', {
-        params: {
-          page: 1,
-          limit: ITEMS_PER_PAGE,
-        },
-      });
+      const response = await client.get<PopularPlaceResponse[]>(
+        '/places/popular',
+        {
+          params: {
+            page: 1,
+            limit: ITEMS_PER_PAGE,
+          },
+        }
+      );
 
       const transformedData = transformResponse(response.data, 0);
       setPlaces(transformedData);
@@ -90,12 +107,15 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
     const nextPage = page + 1;
 
     try {
-      const response = await client.get<PopularPlaceResponse[]>('/places/popular', {
-        params: {
-          page: nextPage,
-          limit: ITEMS_PER_PAGE,
-        },
-      });
+      const response = await client.get<PopularPlaceResponse[]>(
+        '/places/popular',
+        {
+          params: {
+            page: nextPage,
+            limit: ITEMS_PER_PAGE,
+          },
+        }
+      );
 
       const transformedData = transformResponse(response.data, places.length);
       setPlaces((prev) => [...prev, ...transformedData]);
@@ -147,11 +167,22 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
     console.log('검색어:', query);
   };
 
-  const handleCardClick = (placeId: string) => {
+  const handleCardClick = (place: Place) => {
     if (onViewAccommodation) {
-      onViewAccommodation(placeId);
+      onViewAccommodation(place.id);
     }
-    console.log('장소 클릭:', placeId);
+
+    console.log('전송되니?');
+
+    // InspirationDetail 페이지로 라우팅 (장소 정보 전달)
+    navigate(`/inspiration/${place.id}`, {
+      state: {
+        title: place.title,
+        address: place.address,
+        summary: place.summary,
+        imageUrl: place.imageUrl,
+      },
+    });
   };
 
   return (
@@ -161,10 +192,10 @@ export function InspirationPage({ onViewAccommodation }: InspirationPageProps) {
         {/* Header Section */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-medium text-gray-900 mb-2">
-            영감 얻기
+            당신을 위한 AI 장소추천
           </h1>
           <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
-            인기 있는 장소를 둘러보고 여행 영감을 얻으세요
+            인기 있는 장소를 둘러보고 여행 영감을 얻으세요.
           </p>
 
           {/* Search Bar */}

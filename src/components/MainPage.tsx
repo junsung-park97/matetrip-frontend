@@ -71,45 +71,6 @@ const REGION_CATEGORIES = [
   },
 ];
 
-const normalizeOverlapText = (values?: unknown): string | undefined => {
-  if (!values) {
-    return undefined;
-  }
-
-  const arrayValues = Array.isArray(values) ? values : [values];
-
-  const normalized = arrayValues
-    .map((value) => {
-      if (!value) {
-        return '';
-      }
-      if (typeof value === 'string') {
-        return value;
-      }
-      if (typeof value === 'object') {
-        const candidate = value as Record<string, unknown>;
-        if (typeof candidate.label === 'string') {
-          return candidate.label;
-        }
-        if (typeof candidate.value === 'string') {
-          return candidate.value;
-        }
-        if (typeof candidate.name === 'string') {
-          return candidate.name;
-        }
-      }
-      return String(value);
-    })
-    .map((text) => text.trim())
-    .filter((text) => text.length > 0);
-
-  if (!normalized.length) {
-    return undefined;
-  }
-
-  return normalized.join(', ');
-};
-
 // 임시 매칭 정보 생성 함수 (추후 실제 API로 교체 가능)
 const generateMockMatchingInfo = (index: number): MatchingInfo => {
   const scores = [92, 85, 78, 73, 68, 65, 62, 58, 55, 52];
@@ -175,6 +136,12 @@ export function MainPage({
     fetchAllPosts();
   }, [isAuthLoading, fetchTrigger]);
 
+  const handleSearchBarSubmit = (query: string) => {
+    if (query.trim()) {
+      onSearch({ title: query });
+    }
+  };
+  
   useEffect(() => {
     if (isAuthLoading || !isLoggedIn || !user?.userId) {
       return;
