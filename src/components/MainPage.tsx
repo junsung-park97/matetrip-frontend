@@ -1,25 +1,16 @@
-<<<<<<< HEAD
-import { useState, useEffect } from 'react';
-import { MapPin, SlidersHorizontal } from 'lucide-react';
-=======
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MapPin } from 'lucide-react';
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
 import { Button } from './ui/button';
 import { ImageWithFallback } from './figma/ImageWithFallback';
-import { SearchBar } from './SearchBar';
+//import { SearchBar } from './SearchBar';
 import client from '../api/client';
 import { type Post } from '../types/post';
 import { MainPostCardSkeleton } from './MainPostCardSkeleton';
 import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
-<<<<<<< HEAD
-import type { MatchingInfo } from '../types/matching';
-=======
 import type { MatchingInfo, MatchCandidateDto } from '../types/matching';
 import { type KeywordValue } from '../utils/keyword';
 import { MatchingSearchBar } from './MatchingSearchBar';
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
 
 interface MainPageProps {
   onSearch: (params: {
@@ -80,6 +71,45 @@ const REGION_CATEGORIES = [
   },
 ];
 
+const normalizeOverlapText = (values?: unknown): string | undefined => {
+  if (!values) {
+    return undefined;
+  }
+
+  const arrayValues = Array.isArray(values) ? values : [values];
+
+  const normalized = arrayValues
+    .map((value) => {
+      if (!value) {
+        return '';
+      }
+      if (typeof value === 'string') {
+        return value;
+      }
+      if (typeof value === 'object') {
+        const candidate = value as Record<string, unknown>;
+        if (typeof candidate.label === 'string') {
+          return candidate.label;
+        }
+        if (typeof candidate.value === 'string') {
+          return candidate.value;
+        }
+        if (typeof candidate.name === 'string') {
+          return candidate.name;
+        }
+      }
+      return String(value);
+    })
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0);
+
+  if (!normalized.length) {
+    return undefined;
+  }
+
+  return normalized.join(', ');
+};
+
 // 임시 매칭 정보 생성 함수 (추후 실제 API로 교체 가능)
 const generateMockMatchingInfo = (index: number): MatchingInfo => {
   const scores = [92, 85, 78, 73, 68, 65, 62, 58, 55, 52];
@@ -102,20 +132,16 @@ export function MainPage({
 }: MainPageProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-<<<<<<< HEAD
-  const { isAuthLoading } = useAuthStore();
-=======
   const { user, isAuthLoading } = useAuthStore();
   const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
   const [isMatchesLoading, setIsMatchesLoading] = useState(true);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  // const [searchQuery, setSearchQuery] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedKeyword, setSelectedKeyword] = useState<KeywordValue | ''>('');
+  // const [startDate, setStartDate] = useState('');
+  // const [endDate, setEndDate] = useState('');
+  // const [selectedKeyword, setSelectedKeyword] = useState<KeywordValue | ''>('');
   const filterContainerRef = useRef<HTMLDivElement | null>(null);
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -149,14 +175,6 @@ export function MainPage({
     fetchAllPosts();
   }, [isAuthLoading, fetchTrigger]);
 
-  const handleSearchBarSubmit = (query: string) => {
-    if (query.trim()) {
-      onSearch({ title: query });
-    }
-<<<<<<< HEAD
-=======
-  };
-  
   useEffect(() => {
     if (isAuthLoading || !isLoggedIn || !user?.userId) {
       return;
@@ -275,12 +293,11 @@ export function MainPage({
     };
   }, [matches, posts]);
 
-  const normalizedFilters = {
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
-    keyword: selectedKeyword || undefined,
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
-  };
+  // const normalizedFilters = {
+  //   startDate: startDate || undefined,
+  //   endDate: endDate || undefined,
+  //   keyword: selectedKeyword || undefined,
+  // };
 
   // const runSearch = () => {
   //   const titleQuery = searchQuery.trim();
@@ -338,21 +355,6 @@ export function MainPage({
           </p>
         </div>
         {/* Search Bar and Filters - 로그인한 사용자에게만 표시 */}
-<<<<<<< HEAD
-        {isLoggedIn && (
-          <div className="mb-10 flex items-center gap-3">
-            <SearchBar onSearch={handleSearchBarSubmit} />
-            <Button
-              variant="outline"
-              className="gap-2 px-6 py-3 h-auto border-gray-200"
-            >
-              <SlidersHorizontal className="w-5 h-5" />
-              Filters
-            </Button>
-          </div>
-        )}
-
-=======
         {isLoggedIn && <MatchingSearchBar />}
         {/* {isLoggedIn && (
           <div className="mb-10 flex items-start gap-3">
@@ -456,7 +458,6 @@ export function MainPage({
         {/* </div>
           </div> 
         )} */}
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
         {/* 로그인하지 않은 사용자를 위한 안내 배너 */}
         {!isLoggedIn && (
           <div className="mb-8 bg-gradient-to-r from-blue-50 to-pink-50 rounded-2xl p-6 border border-blue-100">
@@ -485,36 +486,21 @@ export function MainPage({
         )}
         {/* Recommended Posts Section - 모든 사용자에게 표시 */}
         <section className="mb-12">
-<<<<<<< HEAD
-          <h2 className="text-xl font-medium text-gray-900 mb-6">AI 추천 동행</h2>
-=======
           <h2 className="text-xl font-medium text-gray-900 mb-6">
             AI 추천 동행
           </h2>
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {Array.from({ length: 5 }).map((_, index) => (
                 <MainPostCardSkeleton key={index} />
               ))}
             </div>
-<<<<<<< HEAD
-          ) : posts.length === 0 ? (
-=======
           ) : recommendedPosts.length === 0 ? (
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
             <div className="text-center text-gray-500 py-10">
               추천할 동행이 없습니다.
             </div>
           ) : (
             <MatchingCarousel
-<<<<<<< HEAD
-              posts={posts.slice(0, 10)}
-              matchingInfoByPostId={posts.slice(0, 10).reduce((acc, post, index) => {
-                acc[post.id] = generateMockMatchingInfo(index);
-                return acc;
-              }, {} as Record<string, MatchingInfo>)}
-=======
               posts={recommendedPosts}
               matchingInfoByPostId={matchingInfoByPostId}
               // : featuredItems.slice(0, 10).reduce(
@@ -525,7 +511,6 @@ export function MainPage({
               //     {} as Record<string, MatchingInfo>
               //   )
 
->>>>>>> f2d0bc6d3dca8100174e6ee5de4cdd6a68103b90
               onCardClick={handleCardClick}
             />
           )}
