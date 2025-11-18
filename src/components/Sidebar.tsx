@@ -4,7 +4,6 @@ import {
   Plane,
   LogIn,
   Heart,
-  MessageSquare,
   Sparkles,
   ChevronLeft,
   ChevronRight,
@@ -35,20 +34,6 @@ export function Sidebar({
   const [isExpanded, setIsExpanded] = useState(true);
 
   const isActive = (path: string) => location.pathname === path;
-
-  // 반응형 AI Chat 핸들러
-  // 모바일 breakpoint: 768px (Tailwind의 md breakpoint와 동일)
-  const handleAIChatClick = () => {
-    const isMobile = window.innerWidth < 768; // 768px = md breakpoint
-
-    if (isMobile) {
-      // 모바일: 바로 full page로 이동
-      navigate('/ai-chat');
-    } else {
-      // 데스크톱: Quick Chat Panel 열기
-      onAIChatClick();
-    }
-  };
 
   return (
     <div className="relative flex shrink-0">
