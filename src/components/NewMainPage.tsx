@@ -262,8 +262,8 @@ export function NewMainPage({
         <section className="mb-8 md:mb-10 lg:mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-3">
             <div>
-              <h2 className="text-lg md:text-xl font-medium text-gray-900">
-                당신과 잘 맞는 동행
+              <h2 className="text-xl md:text-xl font-bold text-gray-900">
+                000님의 성향에 맞을 수도 있는 동행의 여행일정
               </h2>
               <p className="text-xs md:text-sm text-gray-600 mt-1">
                 MateTrip AI가 추천하는 최적의 여행 파트너
@@ -349,9 +349,14 @@ export function NewMainPage({
         {/* Section 3: Inspiration */}
         <section className="mb-8 md:mb-10 lg:mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-3">
-            <h2 className="text-lg md:text-xl font-medium text-gray-900">
-              Inspiration
-            </h2>
+            <div>
+              <h2 className="text-xl md:text-xl font-bold text-gray-900">
+                Hot Place
+              </h2>
+              <p className='text-xs md:text-sm text-gray-600 mt-1text-xs md:text-sm text-gray-600 mt-1'>
+                MateTrip 유저들의 Pick‼ 
+              </p>
+            </div>
             <Button
               onClick={handleAllViewInspiration}
               variant="ghost"
@@ -426,7 +431,6 @@ export function NewMainPage({
             </Button>
           </div>
         ) : (
-<<<<<<< HEAD
           <div className="relative h-full w-full bg-gray-100 flex items-center justify-center">
             {/* 초기 안내 화면 */}
             <div className="text-center px-8">
@@ -451,29 +455,6 @@ export function NewMainPage({
                 상세 정보를 확인할 수 있습니다
               </p>
             </div>
-=======
-          <div className="relative h-full w-full">
-            {/* 기본값: 서울 중심 지도 */}
-            <SimpleKakaoMap
-              latitude={37.5665}
-              longitude={126.9780}
-              placeName="서울특별시"
-            />
-            
-            {/* 여행 만들기 버튼 */}
-            <Button
-              onClick={() => {
-                if (!isLoggedIn) {
-                  navigate('/login');
-                  return;
-                }
-                onCreatePost();
-              }}
-              className="absolute bottom-6 left-6 z-[9999] bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-            >
-              여행 만들기
-            </Button>
->>>>>>> 7ebf524a90c421351cc59dcad57ad7f2d95ff553
           </div>
         )}
       </div>
