@@ -5,7 +5,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 //import { SearchBar } from './SearchBar';
 import client from '../api/client';
 import { type Post } from '../types/post';
-import { MainPostCardSkeleton } from './MainPostCardSkeleton';
+import { MainPostCardSkeleton } from './AIMatchingSkeletion';
 import { MatchingCarousel } from './MatchingCarousel';
 import { useAuthStore } from '../store/authStore';
 import type { MatchingInfo, MatchCandidateDto } from '../types/matching';
