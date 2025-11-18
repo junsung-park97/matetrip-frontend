@@ -106,7 +106,7 @@ export function Sidebar({
             title={!isExpanded ? 'AI 동행 찾기' : ''}
           >
             <Plane className="w-5 h-5 shrink-0" />
-            {isExpanded && <span className="font-normal text-base whitespace-nowrap">AI 동행 찾기</span>}
+            {isExpanded && <span className="font-normal text-base whitespace-nowrap">Main</span>}
           </button>
 
             {/* 모든 동행 */}
