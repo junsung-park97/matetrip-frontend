@@ -109,6 +109,26 @@ export function Sidebar({
             {isExpanded && <span className="font-normal text-base whitespace-nowrap">AI 동행 찾기</span>}
           </button>
 
+          {/* All-Trip */}
+          <button
+            onClick={() => navigate('/ai-matching')}
+            className={`flex items-center gap-3 h-12 rounded-[10px] transition-colors ${
+              isExpanded ? 'px-4' : 'justify-center'
+            } ${
+              isActive('/ai-matching')
+                ? 'bg-[#101828] text-white'
+                : 'text-[#364153] hover:bg-gray-100'
+            }`}
+            title={!isExpanded ? 'All-Trip' : ''}
+          >
+            <Sparkles className="w-5 h-5 shrink-0" />
+            {isExpanded && (
+              <span className="font-normal text-base whitespace-nowrap">
+                All-Trip
+              </span>
+            )}
+          </button>
+
             {/* 모든 동행 */}
             <button
               onClick={() => navigate('/all-posts')}
