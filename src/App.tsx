@@ -34,6 +34,7 @@ import { Dialog, DialogContent } from './components/ui/dialog';
 import { ProfileModal } from './components/ProfileModal';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 import { MatchSearchResults } from './components/MatchSearchResults';
+import RealMainPage from './page/RealMainPage';
 // Layout component for pages with Sidebar
 function Layout({
   isLoggedIn,
@@ -308,6 +309,9 @@ export default function App() {
       {isLoggedIn && <NotificationListener />}
       <Routes location={background || location}>
         {/* Routes without Header */}
+        {/* Landing Page */}
+        <Route path="/" element={<RealMainPage />} />
+
         <Route element={<PublicOnlyRoute />}>
           <Route
             path="/login"
@@ -332,7 +336,7 @@ export default function App() {
           }
         >
           <Route
-            path="/"
+            path="/main"
             element={
               <NewMainPageWrapper
                 onCreatePost={() => setShowCreatePost(true)}
