@@ -1,4 +1,4 @@
-import { PlusCircle, X } from 'lucide-react';
+import { PlusCircle, X, ChevronsRight, Filter } from 'lucide-react';
 import React, { useEffect, useRef, useState, memo, useCallback } from 'react';
 import type { Poi, CreatePoiDto, HoveredPoiInfo } from '../hooks/usePoiSocket';
 import {
@@ -91,6 +91,7 @@ interface MapPanelProps {
   itineraryAiPlaces: AiPlace[] | undefined;
   chatAiPlaces: AiPlace[] | undefined;
   isProgrammaticMove: React.MutableRefObject<boolean>;
+  schedulePosition: 'hidden' | 'overlay' | 'docked';
 }
 
 export interface PlaceMarkerProps {
@@ -206,7 +207,8 @@ const PlaceInfoWindow = memo(
           <div className="inline-block rounded bg-[#f5f5f5] px-2 py-1 text-[11px] text-[#999]">
             {(place.category &&
               CATEGORY_INFO[place.category as keyof typeof CATEGORY_INFO]
-                ?.name) || '기타'}
+                ?.name) ||
+              '기타'}
           </div>
           <Button
             size="sm"
@@ -584,6 +586,7 @@ export function MapPanel({
   itineraryAiPlaces,
   chatAiPlaces,
   isProgrammaticMove,
+  schedulePosition,
 }: MapPanelProps) {
   const defaultCenter = { lat: 33.450701, lng: 126.570667 };
   const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
@@ -596,6 +599,7 @@ export function MapPanel({
   const [visibleCategories, setVisibleCategories] = useState<Set<string>>(
     new Set(Object.keys(CATEGORY_INFO))
   );
+  const [isCategoryFilterVisible, setIsCategoryFilterVisible] = useState(true);
 
   const [recommendedRouteInfo, setRecommendedRouteInfo] = useState<
     Record<string, RouteSegment[]>
@@ -1217,7 +1221,9 @@ export function MapPanel({
         latitude: poi.latitude,
         longitude: poi.longitude,
         category:
-          ((poi as any).categoryName as CategoryCode) || ((poi as any).category as CategoryCode) || '기타',
+          ((poi as any).categoryName as CategoryCode) ||
+          ((poi as any).category as CategoryCode) ||
+          '기타',
         image_url: '',
         summary: '',
       })
@@ -1308,42 +1314,76 @@ export function MapPanel({
           });
         }}
       >
-        <div className="absolute top-2.5 right-2.5 z-20 flex gap-2 p-1.5 bg-white/80 backdrop-blur-sm rounded-lg shadow-md">
-          <button
-            onClick={handleToggleAllCategories}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 flex justify-center items-center gap-1.5 ${
-              visibleCategories.size === Object.keys(CATEGORY_INFO).length
-                ? 'bg-gray-800 text-white shadow-sm'
-                : 'bg-white text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            전체
-          </button>
-          <div className="border-b border-gray-300 my-1" />
-
-          {Object.entries(CATEGORY_INFO).map(([key, { name, color }]) => (
+        {schedulePosition !== 'overlay' && (
+          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 p-1.5 bg-white/80 backdrop-blur-sm rounded-lg shadow-md">
             <button
-              key={key}
-              onClick={() => handleCategoryToggle(key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 flex justify-center items-center gap-1.5 ${
-                visibleCategories.has(key)
-                  ? 'text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
-              }`}
+              onClick={() =>
+                setIsCategoryFilterVisible(!isCategoryFilterVisible)
+              }
+              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md flex-shrink-0"
+            >
+              {isCategoryFilterVisible ? (
+                <ChevronsRight size={18} />
+              ) : (
+                <Filter size={18} />
+              )}
+            </button>
+            <div
+              className="grid transition-all duration-300 ease-in-out"
               style={{
-                backgroundColor: visibleCategories.has(key)
-                  ? NEW_CATEGORY_COLORS[key] || color
-                  : undefined,
+                gridTemplateColumns: isCategoryFilterVisible ? '1fr' : '0fr',
               }}
             >
-              <CategoryIcon
-                category={key as CategoryCode}
-                className="w-4 h-4"
-              />
-              {name}
-            </button>
-          ))}
-        </div>
+              <div className="overflow-hidden">
+                <div className="flex items-center gap-2 min-w-max pr-1">
+                  <div className="border-l border-gray-300 h-6" />
+                  <button
+                    onClick={handleToggleAllCategories}
+                    className="whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 flex justify-center items-center gap-1.5"
+                    style={{
+                      backgroundColor:
+                        visibleCategories.size ===
+                        Object.keys(CATEGORY_INFO).length
+                          ? '#374151'
+                          : 'white',
+                      color:
+                        visibleCategories.size ===
+                        Object.keys(CATEGORY_INFO).length
+                          ? 'white'
+                          : '#4B5563',
+                    }}
+                  >
+                    전체
+                  </button>
+
+                  {Object.entries(CATEGORY_INFO).map(
+                    ([key, { name, color }]) => (
+                      <button
+                        key={key}
+                        onClick={() => handleCategoryToggle(key)}
+                        className="whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 flex justify-center items-center gap-1.5"
+                        style={{
+                          backgroundColor: visibleCategories.has(key)
+                            ? NEW_CATEGORY_COLORS[key] || color
+                            : 'white',
+                          color: visibleCategories.has(key)
+                            ? 'white'
+                            : '#4B5563',
+                        }}
+                      >
+                        <CategoryIcon
+                          category={key as CategoryCode}
+                          className="w-4 h-4"
+                        />
+                        {name}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {filteredPlacesToRender.map((place) => (
           <PlaceMarker
             key={`${place.id}-${place.latitude}-${place.longitude}`}

@@ -16,14 +16,15 @@ import {
   UserPlus,
   DoorOpen, // DoorOpen 아이콘 추가
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
+import React from 'react'; // Import React to use React.ReactNode
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from './ui/dialog';
+} from '../components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,14 +33,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog';
+} from '../components/ui/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { ImageWithFallback } from './figma/ImageWithFallback';
+} from '../components/ui/dropdown-menu';
+import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import client from '../api/client';
 import { type Post, type Participation } from '../types/post';
 import { translateKeyword } from '../utils/keyword';
@@ -101,6 +102,15 @@ export function PostDetail({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
+  const [recommendedUserProfiles, setRecommendedUserProfiles] = useState<
+    Record<
+      string,
+      {
+        nickname: string;
+        imageUrl?: string | null;
+      } | null
+    >
+  >({});
 
   const fetchPostDetail = useCallback(async () => {
     if (!postId) return;
@@ -221,6 +231,86 @@ export function PostDetail({
     };
   }, [participations]);
 
+  // 추천 유저 프로필 로드
+  useEffect(() => {
+    let cancelled = false;
+
+    const matchResult = post?.matchResult;
+
+    if (!matchResult || matchResult.length === 0) {
+      setRecommendedUserProfiles({});
+      return;
+    }
+    //추천 유저 프로필 이미지 presignedurl
+    (async () => {
+      try {
+        const entries = await Promise.all(
+          matchResult.slice(0, 3).map(async (candidate) => {
+            const profile = candidate.profile;
+
+            if (!profile?.nickname) {
+              return [candidate.userId, null] as const;
+            }
+
+            let imageUrl: string | null = null;
+            const profileImageId =
+              profile.profileImageId === null
+                ? undefined
+                : profile.profileImageId;
+
+            if (profileImageId) {
+              try {
+                const { data } = await client.get<{ url: string }>(
+                  `/binary-content/${profileImageId}/presigned-url`
+                );
+                imageUrl = data.url;
+              } catch (err) {
+                console.error(
+                  `PostDetail recommended user image load failed for ${profileImageId}:`,
+                  err
+                );
+                imageUrl = null;
+              }
+            }
+
+            return [
+              candidate.userId,
+              {
+                nickname: profile.nickname,
+                imageUrl,
+              },
+            ] as const;
+          })
+        );
+
+        if (cancelled) return;
+
+        const nextMap: Record<
+          string,
+          {
+            nickname: string;
+            imageUrl?: string | null;
+          } | null
+        > = {};
+
+        entries.forEach(([userId, entry]) => {
+          nextMap[userId] = entry;
+        });
+
+        setRecommendedUserProfiles(nextMap);
+      } catch (err) {
+        console.error(
+          'PostDetail recommended user images batch load failed:',
+          err
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post?.matchResult]);
+
   const isAuthor = user && post ? user.userId === post?.writer?.id : false;
   const isLoggedIn = !!user;
 
@@ -272,7 +362,6 @@ export function PostDetail({
       await client.delete(
         `/posts/${postId}/participations/${userParticipation.id}`
       );
-      alert('동행 신청이 취소되었습니다.');
       await fetchPostDetail();
     } catch (err) {
       console.error('Failed to cancel application:', err);
@@ -319,7 +408,12 @@ export function PostDetail({
 
   const isFull = approvedParticipants.length + 1 >= post.maxParticipants;
 
-  let buttonConfig = {
+  let buttonConfig: {
+    text: string;
+    disabled: boolean;
+    className: string;
+    icon: React.ReactNode | null;
+  } = {
     text: '로그인 후 신청 가능',
     disabled: true,
     className: 'w-full',
@@ -340,7 +434,8 @@ export function PostDetail({
           buttonConfig = {
             text: '워크스페이스 입장',
             disabled: false,
-            className: 'w-full bg-black text-white hover:bg-gray-800 py-3 text-lg', // 크기 키움
+            className:
+              'w-full bg-black text-white hover:bg-gray-800 py-3 text-lg', // 크기 키움
             icon: <DoorOpen className="w-5 h-5 mr-2" />, // 아이콘 추가
           };
           break;
@@ -473,10 +568,22 @@ export function PostDetail({
                       alt={post.writer?.profile?.nickname}
                       className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 font-semibold mb-1">
-                        {post.writer?.profile?.nickname}
-                      </p>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-gray-900 font-semibold">
+                          {post.writer?.profile?.nickname}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-shrink-0"
+                          onClick={() =>
+                            post.writer?.id && handleViewProfile(post.writer.id)
+                          }
+                        >
+                          프로필 보기
+                        </Button>
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                         <Thermometer className="w-4 h-4" />
                         <span>
@@ -489,27 +596,17 @@ export function PostDetail({
                           <Badge
                             key={style}
                             variant="secondary"
-                            className="text-xs bg-black text-white" // 블랙으로 통일
+                            className="text-xs bg-black text-white"
                           >
                             {translateKeyword(style)}
                           </Badge>
                         ))}
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-shrink-0"
-                      onClick={() =>
-                        post.writer?.id && handleViewProfile(post.writer.id)
-                      }
-                    >
-                      프로필 보기
-                    </Button>
                   </div>
                 </div>
 
-                <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 max-h-[400px]"> {/* max-h-[400px] 추가 */}
+                <div className="relative w-full rounded-xl overflow-hidden bg-gray-100 max-h-[400px]">
                   <ImageWithFallback
                     src={
                       remoteCoverImageUrl ||
@@ -742,6 +839,63 @@ export function PostDetail({
               {buttonConfig.icon}
               {buttonConfig.text}
             </Button>
+
+            {/* AI 추천 동행 섹션 */}
+            {isAuthor && post.matchResult && post.matchResult.length > 0 && (
+              <div className="bg-gray-50 rounded-xl p-6 shadow-sm space-y-4">
+                <h3 className="text-gray-900 pb-2 border-b font-bold flex items-center gap-2">
+                  <UserPlus className="w-5 h-5" />
+                  AI 추천 동행 (상위 {Math.min(post.matchResult.length, 3)}명)
+                </h3>
+                <div className="space-y-3">
+                  {post.matchResult.slice(0, 3).map((candidate) => {
+                    const recommendedProfile =
+                      recommendedUserProfiles[candidate.userId];
+
+                    const fallbackAvatarName =
+                      recommendedProfile?.nickname ||
+                      candidate.profile?.nickname ||
+                      'user';
+
+                    return (
+                      <div
+                        key={candidate.userId}
+                        className="flex items-center gap-3 p-3 bg-white rounded-lg border"
+                      >
+                        <ImageWithFallback
+                          src={
+                            recommendedProfile?.imageUrl ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                              fallbackAvatarName
+                            )}&background=random&rounded=true`
+                          }
+                          alt={fallbackAvatarName}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0 bg-gray-100"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 font-semibold">
+                            {recommendedProfile?.nickname ||
+                              candidate.profile?.nickname ||
+                              '사용자'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            매칭률: {Math.round(candidate.score * 100)}%
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => handleViewProfile(candidate.userId)}
+                        >
+                          프로필 보기
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -27,7 +27,6 @@ export function MatchingCarousel({
   posts,
   matchingInfoByPostId,
   fallbackMatchingInfo,
-  writerProfileImages,
   onCardClick,
 }: MatchingCarouselProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -60,7 +59,7 @@ export function MatchingCarousel({
         >
           {displayPosts.map((post, index) => {
             const angle = index * angleStep;
-            
+
             return (
               <div
                 key={post.id}
@@ -83,11 +82,8 @@ export function MatchingCarousel({
                     fallbackMatchingInfo ??
                     DEFAULT_MATCHING_INFO
                   }
-                  writerProfileImageUrl={
-                    post.writer?.profile?.profileImageId && writerProfileImages
-                      ? writerProfileImages[post.writer.profile.profileImageId] ?? null
-                      : null
-                  }
+                  writerProfileImageId={post.writer?.profile?.profileImageId}
+                  writerNickname={post.writer?.profile?.nickname ?? null}
                   onClick={() => onCardClick?.(post)}
                 />
               </div>
