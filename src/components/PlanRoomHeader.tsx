@@ -7,9 +7,9 @@ import {
   FileDown,
   Loader2,
   ListOrdered,
+  Save,
 } from 'lucide-react';
 import { Button } from './ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useState } from 'react';
 import {
   DropdownMenu,
@@ -19,12 +19,8 @@ import {
 } from './ui/dropdown-menu';
 import { TripReviewModal } from './TripReviewModal';
 import { useAuthStore } from '../store/authStore';
-
-interface Member {
-  id: string;
-  name: string;
-  avatar: string;
-}
+import { toast } from 'sonner';
+import type { ActiveMember } from '../types/member';
 
 interface PlanRoomHeaderProps {
   workspaceId: string;
@@ -37,10 +33,11 @@ interface PlanRoomHeaderProps {
   onExit: () => void;
   onBack: () => void;
   isOwner?: boolean;
-  activeMembers?: Member[];
+  activeMembers?: ActiveMember[];
   onExportPdf?: () => void;
   isGeneratingPdf?: boolean;
   onToggleScheduleSidebar: () => void;
+  onFlush: () => void;
 }
 
 export function PlanRoomHeader({
@@ -56,14 +53,35 @@ export function PlanRoomHeader({
   onExportPdf,
   isGeneratingPdf = false,
   onToggleScheduleSidebar,
+  onFlush,
 }: PlanRoomHeaderProps) {
   const [isReviewModalOpen, setReviewModalOpen] = useState(false);
   const { user } = useAuthStore();
+  const [isFlushing, setIsFlushing] = useState(false);
 
   // 리뷰 대상에서 자기 자신을 제외합니다.
   const membersToReview = activeMembers.filter(
     (member) => member.id !== user?.userId
   );
+
+  const handleFlush = () => {
+    if (isFlushing) return;
+    setIsFlushing(true);
+
+    try {
+      onFlush();
+      toast.info('저장 요청을 전송했습니다.');
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      toast.error(`요청 전송에 실패했습니다: ${errorMessage}`);
+    }
+
+    // 시각적 피드백을 위해 잠시 '저장 중' 상태를 유지
+    setTimeout(() => {
+      setIsFlushing(false);
+    }, 1500);
+  };
 
   return (
     <div className="border-b border-gray-700 bg-gray-800 px-4 py-2 flex items-center justify-between flex-shrink-0 h-16 text-white relative rounded-lg">
@@ -86,27 +104,23 @@ export function PlanRoomHeader({
         </span>
       </div>
 
-      {/* 오른쪽 영역: 접속 중인 멤버 아바타 + 메뉴 버튼 */}
+      {/* 오른쪽 영역: 메뉴 버튼 */}
       <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-        {/* 접속 중인 멤버 아바타 */}
-        {activeMembers.length > 0 && (
-          <div className="flex items-center">
-            {activeMembers.map((member, index) => (
-              <Avatar
-                key={member.id}
-                className="w-8 h-8 border-2 border-white"
-                style={{
-                  marginLeft: index > 0 ? '-8px' : '0',
-                  zIndex: activeMembers.length - index,
-                }}
-              >
-                <AvatarImage src={member.avatar} alt={member.name} />
-                <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
-        )}
-
+        <Button
+          variant="outline"
+          className="h-9 px-3 gap-2 bg-transparent text-white border-white/50 hover:bg-white/10 hover:text-white"
+          onClick={handleFlush}
+          disabled={isFlushing}
+        >
+          {isFlushing ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          <span className="text-sm font-medium">
+            {isFlushing ? '저장 중...' : '저장'}
+          </span>
+        </Button>
         <Button
           variant="outline"
           className="h-9 px-3 gap-2 bg-transparent text-white border-white/50 hover:bg-white/10 hover:text-white"

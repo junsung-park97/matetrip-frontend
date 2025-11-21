@@ -20,6 +20,7 @@ import React from 'react';
 import { ChatPanel } from './ChatPanel';
 import { CategoryIcon } from './CategoryIcon'; // [추가] CategoryIcon 임포트
 import { type AiPlace, type ChatMessage } from '../hooks/useChatSocket';
+import type { ActiveMember } from '../types/member';
 
 interface PoiItemProps {
   poi: Poi;
@@ -164,6 +165,7 @@ function PoiItem({
     </li>
   );
 }
+
 interface LeftPanelProps {
   isOpen: boolean;
   isRecommendationLoading: boolean;
@@ -185,6 +187,7 @@ interface LeftPanelProps {
   onCardClick: (poi: any) => void;
   setChatAiPlaces: (places: AiPlace[]) => void;
   chatAiPlaces: AiPlace[];
+  activeMembers?: ActiveMember[];
 }
 
 function RecommendedDayItem({
@@ -296,6 +299,7 @@ function ChatSidebar({
   onCardClick,
   setChatAiPlaces,
   chatAiPlaces,
+  activeMembers,
 }: {
   messages: ChatMessage[];
   sendMessage: (message: string) => void;
@@ -305,6 +309,7 @@ function ChatSidebar({
   onCardClick: (poi: any) => void;
   setChatAiPlaces: (places: AiPlace[]) => void;
   chatAiPlaces: AiPlace[];
+  activeMembers?: ActiveMember[];
 }) {
   return (
     <ChatPanel
@@ -316,6 +321,7 @@ function ChatSidebar({
       onCardClick={onCardClick}
       setChatAiPlaces={setChatAiPlaces}
       chatAiPlaces={chatAiPlaces}
+      activeMembers={activeMembers}
     />
   );
 }
@@ -340,6 +346,7 @@ export function LeftPanel({
   onCardClick,
   setChatAiPlaces,
   chatAiPlaces,
+  activeMembers,
 }: LeftPanelProps) {
   const [activeTab, _setActiveTab] = useState('chat');
 
@@ -491,6 +498,7 @@ export function LeftPanel({
           onCardClick={onCardClick}
           setChatAiPlaces={setChatAiPlaces}
           chatAiPlaces={enrichedChatAiPlaces}
+          activeMembers={activeMembers}
         />
       );
     }
