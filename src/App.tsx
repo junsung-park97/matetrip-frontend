@@ -257,7 +257,7 @@ export default function App() {
     // 로그인 성공 후, Zustand 스토어의 checkAuth를 호출하여 상태를 동기화합니다.
     // 이 시점에서 서버는 HttpOnly 쿠키를 설정했을 것입니다.
     checkAuth();
-    navigate('/');
+    navigate('/main');
   };
 
   const handleLogout = async () => {
