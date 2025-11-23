@@ -1,25 +1,26 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { MapPin, Search as SearchIcon } from 'lucide-react'; // SearchIcon 추가
+import { MapPin, Search as SearchIcon, Sparkles } from 'lucide-react'; // SearchIcon, Sparkles 추가
 import { Button } from '../components/ui/button';
 import client from '../api/client';
 import { type Post, type Writer } from '../types/post';
 import { MainPostCardSkeleton } from '../components/AIMatchingSkeletion';
-import { MatchingCarousel } from '../components/MatchingCarousel';
+// import { MatchingCarousel } from '../components/MatchingCarousel';
 import { GridMatchingCard } from '../components/GridMatchingCard';
 import { PostDetail } from './PostDetail';
-import { Dialog, DialogContent } from '../components/ui/dialog';
+// import { Dialog, DialogContent } from '../components/ui/dialog'; // Dialog 관련 임포트 제거
 import { useAuthStore } from '../store/authStore';
 import type {
-  MatchingInfo,
   MatchCandidateDto,
   MatchRecruitingPostDto,
   MatchResponseDto,
+  MatchingInfo, // MatchingInfo 임포트 추가
 } from '../types/matching';
 import { MatchingSearchBar } from '../components/MatchingSearchBar';
 import { toast } from 'sonner';
 import type { MatchingResult } from '../types/matchSearch'; // MatchingResult 타입 임포트
 import type { KeywordValue } from '../utils/keyword'; // KeywordValue 타입 임포트
 import { ProfileModal } from '../components/ProfileModal'; // ProfileModal 임포트 추가
+import PageContainer from '../components/PageContainer';
 
 interface MainPageProps {
   onSearch: (params: {
@@ -29,7 +30,7 @@ interface MainPageProps {
     title?: string;
     keyword?: string;
   }) => void;
-  onViewPost: (postId: string) => void;
+  // onViewPost: (postId: string) => void; // onViewPost prop 제거
   onCreatePost: () => void;
   isLoggedIn: boolean;
   fetchTrigger: number;
@@ -68,14 +69,6 @@ const normalizeTextList = (values?: unknown): string[] => {
     .filter((text) => text.length > 0);
 
   return normalized;
-};
-
-const normalizeOverlapText = (values?: unknown): string | undefined => {
-  const normalized = normalizeTextList(values);
-  if (!normalized.length) {
-    return undefined;
-  }
-  return normalized.join(', ');
 };
 
 const toPercent = (value?: number) => {
@@ -118,6 +111,7 @@ const buildWriterFromCandidate = (
   };
 };
 
+// normalizeKeywords 함수 정의 추가
 const normalizeKeywords = (keywords?: KeywordValue[]) =>
   normalizeTextList(keywords);
 
@@ -152,9 +146,15 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
   const [matches, setMatches] = useState<MatchCandidateDto[]>([]);
   const [profileUpdateTrigger, setProfileUpdateTrigger] = useState(0);
 
-  // 모달 상태 관리
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // 모달 상태 관리 (제거)
+  // const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // PostDetail Panel 관련 상태 추가
+  const [showPostDetailPanel, setShowPostDetailPanel] = useState(false);
+  const [selectedPostIdForPanel, setSelectedPostIdForPanel] = useState<
+    string | null
+  >(null);
 
   // 작성자 프로필 이미지 관리
   const [writerProfileImages, setWriterProfileImages] = useState<
@@ -259,15 +259,19 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
   }, [isFilterOpen]);
 
   const { recommendedPosts, matchingInfoByPostId } = useMemo(() => {
-    const entries: Array<{ post: Post; info: MatchingInfo }> = [];
+    // info 타입을 MatchingInfo와 일치하도록 수정
+    const entries: Array<{
+      post: Post;
+      info: MatchingInfo; // MatchingInfo 타입으로 변경
+    }> = [];
     const seenPostIds = new Set<string>();
 
     matches.forEach((candidate) => {
       const writer = buildWriterFromCandidate(candidate);
-      const tendencyText = normalizeOverlapText(
+      const tendencyList = normalizeTextList(
         candidate.overlappingTendencies
       );
-      const styleText = normalizeOverlapText(candidate.overlappingTravelStyles);
+      const styleList = normalizeTextList(candidate.overlappingTravelStyles);
 
       (candidate.recruitingPosts ?? []).forEach((matchPost) => {
         if (seenPostIds.has(matchPost.id)) {
@@ -290,8 +294,8 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
               candidate.vectorScore !== undefined
                 ? toPercent(candidate.vectorScore)
                 : undefined,
-            tendency: tendencyText,
-            style: styleText,
+            tendency: tendencyList.join(', '), // string[]를 string으로 변환
+            style: styleList.join(', '),       // string[]를 string으로 변환
           },
         });
       });
@@ -299,7 +303,9 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
 
     return {
       recommendedPosts: entries.map((entry) => entry.post),
-      matchingInfoByPostId: entries.reduce<Record<string, MatchingInfo>>(
+      matchingInfoByPostId: entries.reduce<
+        Record<string, MatchingInfo> // MatchingInfo 타입으로 변경
+      >(
         (acc, entry) => {
           acc[entry.post.id] = entry.info;
           return acc;
@@ -374,14 +380,24 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
     }
   }, [recommendedPosts, searchResults]); // searchResults 의존성 추가
 
+  // PostDetail Panel 열기 핸들러
+  const handleOpenPostDetailPanel = (postId: string) => {
+    setSelectedPostIdForPanel(postId);
+    setShowPostDetailPanel(true);
+  };
+
+  // PostDetail Panel 닫기 핸들러
+  const handleClosePostDetailPanel = () => {
+    setShowPostDetailPanel(false);
+    setSelectedPostIdForPanel(null);
+  };
+
   const handleCardClick = (post: Post | MatchRecruitingPostDto): void => {
     if (!isLoggedIn) {
       window.location.href = '/login';
       return;
     }
-    // 모달 직접 열기 (메인페이지 이동 대신)
-    setSelectedPostId(post.id);
-    setIsModalOpen(true);
+    handleOpenPostDetailPanel(post.id); // 패널 열기 핸들러 호출
   };
 
   // MatchingSearchBar로부터 검색 결과를 받는 핸들러
@@ -425,12 +441,15 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
 
   return (
     <div className="bg-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-16 py-22">
+      <PageContainer>
         {/* Header Section */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-center text-gray-900 mb-2">
-            MateTrip AI가 추천하는 최적의 여행 파트너
-          </h1>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-7 h-7 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-900">
+              MateTrip AI가 추천하는 최적의 여행 파트너
+            </h1>
+          </div>
         </div>
         {/* 로그인하지 않은 사용자를 위한 안내 배너 */}
         {!isLoggedIn && (
@@ -458,8 +477,8 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
             </div>
           </div>
         )}
-        {/* Recommended Posts Section - 모든 사용자에게 표시 */}
-        {!searchResults && ( // 검색 결과가 없을 때만 캐러셀 표시
+        {/* Recommended Posts Section - 캐러셀 (주석 처리) */}
+        {/* {!searchResults && ( // 검색 결과가 없을 때만 캐러셀 표시
           <section className="mb-12">
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
@@ -480,7 +499,7 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
               />
             )}
           </section>
-        )}
+        )} */}
 
         {/* 전체 추천 동행 그리드 또는 검색 결과 */}
         <section className="mb-12">
@@ -520,7 +539,12 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
                     <GridMatchingCard
                       key={result.post.id}
                       post={result.post}
-                      matchingInfo={result.matchingInfo}
+                      matchingInfo={{
+                        ...result.matchingInfo,
+                        // 이미 MatchingSearchBar에서 string으로 변환되어 오므로 다시 변환할 필요 없음
+                        // tendency: normalizeTextList(result.matchingInfo.tendency),
+                        // style: normalizeTextList(result.matchingInfo.style),
+                      }}
                       rank={index + 1}
                       writerProfileImageUrl={
                         result.writerProfileImageId
@@ -581,30 +605,33 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
             </div>
           )}
         </section>
-      </div>
+      </PageContainer>
 
-      {/* PostDetail 모달 */}
-      <Dialog
-        open={isModalOpen}
-        onOpenChange={(open) => {
-          setIsModalOpen(open);
-          if (!open) {
-            setSelectedPostId(null);
-          }
-        }}
+      {/* PostDetail Panel 및 오버레이 */}
+      <div
+        className={`fixed inset-0 z-20 bg-black/50 transition-opacity duration-300 ${
+          showPostDetailPanel
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={handleClosePostDetailPanel}
       >
-        <DialogContent className="w-full !max-w-[1100px] h-[90vh] p-0 flex flex-col [&>button]:hidden border-0 rounded-lg overflow-hidden">
-          {selectedPostId && (
+        {/* PostDetail Panel */}
+        <div
+          className={`fixed right-0 top-0 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-30
+            ${showPostDetailPanel ? 'translate-x-0' : 'translate-x-full'} w-1/2`}
+          onClick={(e) => e.stopPropagation()} // 패널 내부 클릭 시 오버레이 닫힘 방지
+        >
+          {selectedPostIdForPanel && (
             <PostDetail
-              postId={selectedPostId}
+              postId={selectedPostIdForPanel}
               onJoinWorkspace={async (postId, workspaceName) => {
                 try {
                   await client.post('/workspace', {
                     postId,
                     workspaceName,
                   });
-                  setIsModalOpen(false);
-                  setSelectedPostId(null);
+                  handleClosePostDetailPanel(); // 패널 닫기
                   toast.success('워크스페이스에 입장했습니다.');
                 } catch (error) {
                   console.error('Failed to create or join workspace:', error);
@@ -615,40 +642,26 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
               }}
               onViewProfile={(userId) => {
                 console.log('onViewProfile called with userId:', userId);
-                // setIsModalOpen(false); // PostDetail 모달을 닫지 않도록 이 줄을 제거합니다.
-                // setSelectedPostId(null); // PostDetail 모달의 postId를 초기화하지 않습니다.
+                // handleClosePostDetailPanel(); // PostDetail 패널을 닫지 않도록 이 줄을 제거합니다.
                 setProfileUserId(userId);
                 setShowProfileModal(true);
-                console.log(
-                  'ProfileModal states after update - showProfileModal:',
-                  true,
-                  'profileUserId:',
-                  userId
-                );
               }}
               onEditPost={(post) => {
-                setIsModalOpen(false);
-                setSelectedPostId(null);
-                // 게시글 수정 로직
+                handleClosePostDetailPanel(); // 패널 닫기
+                // 게시글 수정 로직 (App.tsx에서 처리)
                 console.log('Edit post:', post);
               }}
               onDeleteSuccess={() => {
-                setIsModalOpen(false);
-                setSelectedPostId(null);
+                handleClosePostDetailPanel(); // 패널 닫기
                 toast.success('게시글이 삭제되었습니다.');
                 // 목록 새로고침
                 window.location.reload();
               }}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setIsModalOpen(false);
-                  setSelectedPostId(null);
-                }
-              }}
+              onOpenChange={handleClosePostDetailPanel} // 패널 닫기 핸들러 연결
             />
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
 
       {/* ProfileModal */}
       {profileUserId && (
@@ -656,17 +669,15 @@ export function MainPage({ fetchTrigger, isLoggedIn }: MainPageProps) {
           userId={profileUserId}
           open={showProfileModal}
           onOpenChange={(open) => {
-            // onClose -> onOpenChange로 수정
-            setShowProfileModal(open); // open 값을 직접 사용
+            setShowProfileModal(open);
             if (!open) {
               setProfileUserId(null);
             }
           }}
-          onViewPost={(postId) => {
-            setShowProfileModal(false); // 프로필 모달 닫기
-            setSelectedPostId(postId); // 게시글 상세 모달을 위해 ID 설정
-            setIsModalOpen(true); // 게시글 상세 모달 열기
-          }}
+          // onViewPost={(postId) => { // onViewPost prop 제거
+          //   setShowProfileModal(false); // 프로필 모달 닫기
+          //   handleOpenPostDetailPanel(postId); // 게시글 상세 패널 열기
+          // }}
           onProfileUpdated={handleProfileUpdated}
         />
       )}
