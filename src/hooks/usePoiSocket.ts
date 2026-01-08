@@ -117,6 +117,15 @@ export function usePoiSocket(workspaceId: string, members: WorkspaceMember[]) {
 
   const addSchedule = useCallback(
     (poiId: string, planDayId: string) => {
+      // 낙관적 업데이트: 서버 응답 전에 먼저 상태 변경
+      setPois((prevPois) =>
+        prevPois.map((p) =>
+          p.id === poiId
+            ? { ...p, planDayId, status: 'SCHEDULED' }
+            : p
+        )
+      );
+
       socketRef.current?.emit(PoiSocketEvent.ADD_SCHEDULE, {
         workspaceId,
         poiId,

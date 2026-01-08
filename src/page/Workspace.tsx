@@ -767,36 +767,9 @@ export function Workspace({
           return;
         }
 
-        const isDroppingToMarkerStorage =
-          targetDroppableId === 'marker-storage';
         const isDroppingToItineraryDay = dayLayers.some(
           (layer) => layer.id === targetDroppableId
         );
-
-        setPois((currentPois) => {
-          return currentPois.map((p) => {
-            if (p.id === activeId) {
-              if (isDroppingToMarkerStorage) {
-                return {
-                  ...p,
-                  status: 'MARKED',
-                  planDayId: undefined,
-                  sequence: 0,
-                };
-              } else if (isDroppingToItineraryDay) {
-                const dayId = targetDroppableId;
-                return {
-                  ...p,
-                  status: 'SCHEDULED',
-                  planDayId: dayId,
-                  sequence: 999,
-                  categoryName: p.categoryName,
-                };
-              }
-            }
-            return p;
-          });
-        });
 
         if (activePoi.planDayId) {
           removeSchedule(activeId, activePoi.planDayId);
