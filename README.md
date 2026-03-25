@@ -1,4 +1,4 @@
-# MatEtrip Frontend
+# Matetrip Frontend
 
 AI 기반 협업 여행 플래닝 웹 애플리케이션의 프론트엔드 프로젝트입니다.
 
