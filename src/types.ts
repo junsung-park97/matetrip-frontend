@@ -9,3 +9,5 @@ export interface LoginSuccessResponse {
 export interface ApiErrorResponse {
   message: string;
 }
+
+// 탑입
